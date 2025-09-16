@@ -8,6 +8,21 @@ import '../../models/stream/stream_model.dart';
 import 'firebase_service.dart';
 
 class FirestoreRepository {
+  // Helper function to convert Firestore data with proper Timestamp handling
+  Map<String, dynamic> _convertFirestoreData(Map<String, dynamic> data) {
+    final convertedData = <String, dynamic>{};
+    
+    for (final entry in data.entries) {
+      if (entry.value is Timestamp) {
+        convertedData[entry.key] = (entry.value as Timestamp).toDate().toIso8601String();
+      } else {
+        convertedData[entry.key] = entry.value;
+      }
+    }
+    
+    return convertedData;
+  }
+
   // Team operations
   Future<List<TeamModel>> getAllTeams() async {
     try {
@@ -76,7 +91,10 @@ class FirestoreRepository {
       final querySnapshot =
           await FirebaseService.firestore.collection('events').get();
       return querySnapshot.docs
-          .map((doc) => EventModel.fromJson({...doc.data(), 'id': doc.id}))
+          .map((doc) {
+            final data = _convertFirestoreData(doc.data());
+            return EventModel.fromJson({...data, 'id': doc.id});
+          })
           .toList();
     } catch (e) {
       debugPrint('Error getting events: $e');
@@ -92,7 +110,10 @@ class FirestoreRepository {
               .where('status', isEqualTo: 'live')
               .get();
       return querySnapshot.docs
-          .map((doc) => EventModel.fromJson({...doc.data(), 'id': doc.id}))
+          .map((doc) {
+            final data = _convertFirestoreData(doc.data());
+            return EventModel.fromJson({...data, 'id': doc.id});
+          })
           .toList();
     } catch (e) {
       debugPrint('Error getting live events: $e');
@@ -108,7 +129,10 @@ class FirestoreRepository {
 
       final allEvents =
           querySnapshot.docs
-              .map((doc) => EventModel.fromJson({...doc.data(), 'id': doc.id}))
+              .map((doc) {
+            final data = _convertFirestoreData(doc.data());
+            return EventModel.fromJson({...data, 'id': doc.id});
+          })
               .toList();
 
       // Filter for upcoming events and sort by startTime
@@ -130,7 +154,8 @@ class FirestoreRepository {
               .doc(eventId)
               .get();
       if (doc.exists) {
-        return EventModel.fromJson({...doc.data()!, 'id': doc.id});
+        final data = _convertFirestoreData(doc.data()!);
+        return EventModel.fromJson({...data, 'id': doc.id});
       }
       return null;
     } catch (e) {
@@ -341,7 +366,10 @@ class FirestoreRepository {
               .get();
 
       return query.docs
-          .map((doc) => EventModel.fromJson(doc.data() as Map<String, dynamic>))
+          .map((doc) {
+            final data = _convertFirestoreData(doc.data() as Map<String, dynamic>);
+            return EventModel.fromJson({...data, 'id': doc.id});
+          })
           .toList();
     } catch (e) {
       debugPrint('Error getting events: $e');
@@ -357,8 +385,10 @@ class FirestoreRepository {
           (snapshot) =>
               snapshot.docs
                   .map(
-                    (doc) =>
-                        EventModel.fromJson(doc.data() as Map<String, dynamic>),
+                    (doc) {
+                      final data = _convertFirestoreData(doc.data() as Map<String, dynamic>);
+                      return EventModel.fromJson({...data, 'id': doc.id});
+                    },
                   )
                   .toList(),
         );
@@ -605,13 +635,7 @@ class FirestoreRepository {
         batch.update(userRef, entry.value);
       }
 
-      // Update event status
-      final eventRef = FirebaseService.eventsCollection.doc(eventId);
-      batch.update(eventRef, {
-        'status': EventStatus.completed.name,
-        'winnerId': winnerId,
-        'endTime': FieldValue.serverTimestamp(),
-      });
+      // Note: Event status is updated separately in completeEvent function
 
       await batch.commit();
       debugPrint(
@@ -649,7 +673,21 @@ class FirestoreRepository {
   // Mark event as completed and trigger bet resolution
   Future<void> completeEvent(String eventId, String winnerId) async {
     try {
+      debugPrint('Completing event: $eventId with winner: $winnerId');
+      
+      // First, just update the event status and winner
+      await FirebaseService.eventsCollection.doc(eventId).update({
+        'status': EventStatus.completed.name,
+        'winnerId': winnerId,
+        'endTime': FieldValue.serverTimestamp(),
+      });
+      
+      debugPrint('Event status updated successfully');
+      
+      // Then resolve bets separately to avoid batch conflicts
       await resolveEventBets(eventId, winnerId);
+      
+      debugPrint('Event completed successfully: $eventId');
     } catch (e) {
       debugPrint('Error completing event: $e');
       rethrow;

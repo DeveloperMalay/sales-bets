@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:sales_bets/models/bet/bet_model.dart';
 import '../../core/themes/app_theme.dart';
 import '../../services/data/data_seeder.dart';
 import '../../services/api/firestore_repository.dart';
@@ -174,38 +173,6 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
       setState(() {
         _statusMessage = '❌ Error completing event: $e';
         _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _createQuickTestBet(EventModel event, TeamModel team) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _statusMessage = '❌ No authenticated user found';
-      });
-      return;
-    }
-
-    try {
-      final bet = BetModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: user.uid,
-        eventId: event.id,
-        teamId: team.id,
-        creditsStaked: 500, // Test with 500 credits
-        placedAt: DateTime.now(),
-      );
-
-      await _repository.placeBet(bet);
-
-      setState(() {
-        _statusMessage =
-            '✅ Quick bet placed! 500 credits on ${team.name} for "${event.title}"';
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = '❌ Error creating quick bet: $e';
       });
     }
   }
@@ -559,25 +526,7 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          if (!isCompleted && eventTeams.isNotEmpty) ...[
-            ElevatedButton.icon(
-              onPressed:
-                  _isLoading
-                      ? null
-                      : () => _createQuickTestBet(event, eventTeams.first),
-              icon: const Icon(Icons.add_circle_outline, size: 16),
-              label: const Text('Quick Bet'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
+
           ElevatedButton.icon(
             onPressed:
                 isCompleted || _isLoading
