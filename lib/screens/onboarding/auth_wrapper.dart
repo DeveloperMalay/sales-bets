@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../blocs/auth/auth_bloc.dart';
+import 'cubit/auth_bloc.dart';
 import 'onboarding_wrapper.dart';
 import 'login_screen.dart';
 

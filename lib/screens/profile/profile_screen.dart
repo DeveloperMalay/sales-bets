@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
-import '../../blocs/auth/auth_bloc.dart';
+import '../onboarding/cubit/auth_bloc.dart';
 import '../../services/api/firestore_repository.dart';
 import '../../models/user/user_model.dart';
 import '../../models/bet/bet_model.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
-import '../../models/bet/bet_model.dart';
-import '../../services/api/firestore_repository.dart';
+import '../../../models/bet/bet_model.dart';
+import '../../../services/api/firestore_repository.dart';
 
 part 'betting_event.dart';
 part 'betting_state.dart';

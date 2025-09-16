@@ -1,66 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sales_bets/models/team/team_model.dart';
+import 'package:sales_bets/screens/teams/cubit/teams_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 
-class TeamsScreen extends StatelessWidget {
+class TeamsScreen extends StatefulWidget {
   const TeamsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Teams & Athletes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: DefaultTabController(
-        length: 2,
-        child: Column(
-          children: [
-            FadeInDown(
-              child: const TabBar(
-                labelColor: AppTheme.primaryColor,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: AppTheme.primaryColor,
-                tabs: [
-                  Tab(text: 'All Teams'),
-                  Tab(text: 'Leaderboard'),
-                ],
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  FadeInLeft(child: _buildTeamsList()),
-                  FadeInRight(child: _buildLeaderboard()),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  State<TeamsScreen> createState() => _TeamsScreenState();
+}
+
+class _TeamsScreenState extends State<TeamsScreen> {
+  @override
+  void initState() {
+    context.read<TeamsCubit>().getTeams();
+    super.initState();
   }
 
-  Widget _buildTeamsList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-      itemCount: 10,
-      itemBuilder: (context, index) {
-        return FadeInUp(
-          delay: Duration(milliseconds: index * 100),
-          child: _buildTeamListItem(index),
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<TeamsCubit, TeamsState>(
+      listener: (context, state) {},
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Teams'),
+            actions: [
+              IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+            ],
+          ),
+          body: DefaultTabController(
+            length: 2,
+            child:
+                state.status == TeamStatus.loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                      children: [
+                        FadeInDown(
+                          child: const TabBar(
+                            labelColor: AppTheme.primaryColor,
+                            unselectedLabelColor: Colors.grey,
+                            indicatorColor: AppTheme.primaryColor,
+                            tabs: [
+                              Tab(text: 'All Teams'),
+                              Tab(text: 'Leaderboard'),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              FadeInLeft(
+                                child: _buildTeamsList(teams: state.teams),
+                              ),
+                              FadeInRight(child: _buildLeaderboard()),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildTeamListItem(int index) {
+  Widget _buildTeamsList({required List<TeamModel> teams}) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+      itemCount: teams.length,
+      itemBuilder: (context, index) {
+        return FadeInUp(
+          delay: Duration(milliseconds: index * 100),
+          child: _buildTeamListItem(team: teams[index]),
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamListItem({required TeamModel team}) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -84,11 +105,7 @@ class TeamsScreen extends StatelessWidget {
               gradient: AppTheme.primaryGradient,
               borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
             ),
-            child: const Icon(
-              Icons.group,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: const Icon(Icons.group, color: Colors.white, size: 30),
           ),
           const SizedBox(width: AppConstants.mediumSpacing),
           Expanded(
@@ -96,42 +113,39 @@ class TeamsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Team ${String.fromCharCode(65 + index)}',
+                  'Team ${team.name}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  '${(index + 1) * 15} wins • ${(index + 1) * 123}K followers',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  '${team.wins} wins • ${team.followers}K followers',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const SizedBox(height: AppConstants.smallSpacing),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Following',
-                        style: TextStyle(
-                          color: AppTheme.successColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    // Container(
+                    //   padding: const EdgeInsets.symmetric(
+                    //     horizontal: 8,
+                    //     vertical: 4,
+                    //   ),
+                    //   decoration: BoxDecoration(
+                    //     color: AppTheme.successColor.withOpacity(0.1),
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: const Text(
+                    //     'Following',
+                    //     style: TextStyle(
+                    //       color: AppTheme.successColor,
+                    //       fontSize: 12,
+                    //       fontWeight: FontWeight.w600,
+                    //     ),
+                    //   ),
+                    // ),
                     const SizedBox(width: AppConstants.smallSpacing),
-                    if (index < 3)
+                    if (team.isLive)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -191,7 +205,7 @@ class TeamsScreen extends StatelessWidget {
   Widget _buildLeaderboardItem(int index) {
     final rank = index + 1;
     Color rankColor = Colors.grey;
-    
+
     if (rank == 1) rankColor = Colors.amber;
     if (rank == 2) rankColor = Colors.grey[400]!;
     if (rank == 3) rankColor = Colors.brown;
@@ -202,9 +216,7 @@ class TeamsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
-        border: rank <= 3 
-            ? Border.all(color: rankColor, width: 2)
-            : null,
+        border: rank <= 3 ? Border.all(color: rankColor, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -218,10 +230,7 @@ class TeamsScreen extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: rankColor,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: rankColor, shape: BoxShape.circle),
             child: Center(
               child: Text(
                 '#$rank',
@@ -241,11 +250,7 @@ class TeamsScreen extends StatelessWidget {
               gradient: AppTheme.primaryGradient,
               borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
             ),
-            child: const Icon(
-              Icons.group,
-              color: Colors.white,
-              size: 25,
-            ),
+            child: const Icon(Icons.group, color: Colors.white, size: 25),
           ),
           const SizedBox(width: AppConstants.mediumSpacing),
           Expanded(
@@ -261,10 +266,7 @@ class TeamsScreen extends StatelessWidget {
                 ),
                 Text(
                   '${(10 - index) * 1250} credits earned',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ],
             ),
@@ -281,9 +283,7 @@ class TeamsScreen extends StatelessWidget {
               ),
               Text(
                 '${index * 5} losses',
-                style: const TextStyle(
-                  color: AppTheme.errorColor,
-                ),
+                style: const TextStyle(color: AppTheme.errorColor),
               ),
             ],
           ),

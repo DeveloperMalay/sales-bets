@@ -6,8 +6,8 @@ import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
-import '../../blocs/auth/auth_bloc.dart';
-import '../../blocs/betting/betting_bloc.dart';
+import '../onboarding/cubit/auth_bloc.dart';
+import 'cubit/betting_bloc.dart';
 import '../../widgets/animations/win_celebration.dart';
 
 class BettingScreen extends StatefulWidget {

@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/stream/stream_model.dart';
-import '../../blocs/auth/auth_bloc.dart';
+import '../onboarding/cubit/auth_bloc.dart';
 
 class StreamViewerScreen extends StatefulWidget {
   final StreamModel stream;
