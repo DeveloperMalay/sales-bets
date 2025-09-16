@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/constants/app_constants.dart';
@@ -31,7 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state.status == AuthStatus.error) {
+          if (state.status == AuthStatus.loaded && state.user != null) {
+            context.pushReplacement('/onboarding');
+          } else if (state.status == AuthStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage ?? 'An error occurred'),
