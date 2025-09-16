@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
+import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import 'package:sales_bets/screens/teams/cubit/teams_cubit.dart';
 import 'core/themes/app_theme.dart';
 import 'core/constants/app_constants.dart';
@@ -56,6 +57,10 @@ class SalesBetsApp extends StatelessWidget {
           BlocProvider(
             create:
                 (context) => TeamsCubit(context.read<FirestoreRepository>()),
+          ),
+          BlocProvider(
+            create:
+                (context) => ProfileCubit(context.read<FirestoreRepository>()),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeState>(

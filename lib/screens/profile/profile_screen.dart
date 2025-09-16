@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../onboarding/cubit/auth_bloc.dart';
-import '../../services/api/firestore_repository.dart';
-import '../../models/user/user_model.dart';
 import '../../models/bet/bet_model.dart';
 import '../dev/dev_tools_screen.dart';
 
@@ -17,96 +16,61 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  UserModel? user;
-  List<BetModel> recentBets = [];
-  bool isLoading = true;
-
   @override
   void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      final repository = context.read<FirestoreRepository>();
-      
-      try {
-        // Load user data
-        final userData = await repository.getUser(authState.user.uid);
-        final userBets = await repository.getUserBets(authState.user.uid);
-        
-        if (mounted) {
-          setState(() {
-            user = userData ?? UserModel(
-              id: authState.user.uid,
-              email: authState.user.email ?? '',
-              displayName: authState.user.displayName ?? 'User',
-              createdAt: DateTime.now(),
-            );
-            recentBets = userBets.take(3).toList();
-            isLoading = false;
-          });
-        }
-      } catch (e) {
-        // Fallback to auth data if Firestore fails
-        if (mounted) {
-          setState(() {
-            user = UserModel(
-              id: authState.user.uid,
-              email: authState.user.email ?? '',
-              displayName: authState.user.displayName ?? 'User',
-              createdAt: DateTime.now(),
-            );
-            isLoading = false;
-          });
-        }
-      }
+      context.read<ProfileCubit>().loadUserProfile(authState.user.uid);
     }
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {},
+    return BlocConsumer<ProfileCubit, ProfileState>(
+      listener: (context, state) {
+        if (state.status == ProfileStatus.error && state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profile'),
+            actions: [
+              IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
+            ],
           ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  FadeInDown(
-                    child: _buildProfileHeader(context),
+          body:
+              state.status == ProfileStatus.loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        FadeInDown(child: _buildProfileHeader(context, state)),
+                        const SizedBox(height: AppConstants.largeSpacing),
+                        FadeInUp(child: _buildStatsCards(context, state)),
+                        const SizedBox(height: AppConstants.largeSpacing),
+                        FadeInUp(
+                          delay: const Duration(milliseconds: 200),
+                          child: _buildBettingHistory(context, state),
+                        ),
+                        const SizedBox(height: AppConstants.largeSpacing),
+                        FadeInUp(
+                          delay: const Duration(milliseconds: 400),
+                          child: _buildMenuItems(context),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInUp(
-                    child: _buildStatsCards(context),
-                  ),
-                  const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 200),
-                    child: _buildBettingHistory(context),
-                  ),
-                  const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 400),
-                    child: _buildMenuItems(context),
-                  ),
-                ],
-              ),
-            ),
+        );
+      },
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, ProfileState state) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.largeSpacing),
@@ -127,31 +91,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 4),
             ),
-            child: user?.profileImageUrl != null
-                ? ClipOval(
-                    child: Image.network(
-                      user!.profileImageUrl!,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          size: 50,
-                          color: AppTheme.primaryColor,
-                        );
-                      },
+            child:
+                state.user?.profileImageUrl != null
+                    ? ClipOval(
+                      child: Image.network(
+                        state.user!.profileImageUrl!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.person,
+                            size: 50,
+                            color: AppTheme.primaryColor,
+                          );
+                        },
+                      ),
+                    )
+                    : const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: AppTheme.primaryColor,
                     ),
-                  )
-                : const Icon(
-                    Icons.person,
-                    size: 50,
-                    color: AppTheme.primaryColor,
-                  ),
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
           Text(
-            user?.displayName ?? 'User',
+            state.user?.displayName ?? 'User',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -159,28 +124,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           Text(
-            user?.email ?? '',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            state.user?.email ?? '',
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              _getMemberSinceText(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+              _getMemberSinceText(state),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
         ],
@@ -188,21 +144,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  String _getMemberSinceText() {
-    if (user?.createdAt == null) return 'New Member';
-    
-    final createdAt = user!.createdAt!;
+  String _getMemberSinceText(ProfileState state) {
+    if (state.user?.createdAt == null) return 'New Member';
+
+    final createdAt = state.user!.createdAt!;
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
-    
+
     return 'Member since ${months[createdAt.month - 1]} ${createdAt.year}';
   }
 
-  Widget _buildStatsCards(BuildContext context) {
-    final winRate = _calculateWinRate();
-    
+  Widget _buildStatsCards(BuildContext context, ProfileState state) {
+    final winRate = _calculateWinRate(state);
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.mediumSpacing,
@@ -212,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: _buildStatCard(
               'Total Credits',
-              _formatNumber(user?.credits ?? 1000),
+              _formatNumber(state.user?.credits ?? 1000),
               Icons.account_balance_wallet,
               AppTheme.primaryColor,
             ),
@@ -221,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: _buildStatCard(
               'Total Wins',
-              '${user?.totalWins ?? 0}',
+              '${state.user?.totalWins ?? 0}',
               Icons.emoji_events,
               AppTheme.successColor,
             ),
@@ -249,17 +215,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return number.toString();
   }
 
-  int _calculateWinRate() {
-    if (user == null || user!.totalWins == 0) return 0;
-    
-    final totalBets = recentBets.length;
+  int _calculateWinRate(ProfileState state) {
+    if (state.user == null || state.user!.totalWins == 0) return 0;
+
+    final totalBets = state.recentBets.length;
     if (totalBets == 0) return 0;
-    
-    final wins = recentBets.where((bet) => bet.status == BetStatus.won).length;
+
+    final wins =
+        state.recentBets.where((bet) => bet.status == BetStatus.won).length;
     return ((wins / totalBets) * 100).round();
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
       decoration: BoxDecoration(
@@ -275,25 +247,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 30,
-          ),
+          Icon(icon, color: color, size: 30),
           const SizedBox(height: AppConstants.smallSpacing),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -301,7 +263,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildBettingHistory(BuildContext context) {
+  Widget _buildBettingHistory(BuildContext context, ProfileState state) {
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppConstants.mediumSpacing,
@@ -326,30 +288,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               const Text(
                 'Recent Bets',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('View All'),
-              ),
+              TextButton(onPressed: () {}, child: const Text('View All')),
             ],
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
-          if (recentBets.isEmpty)
+          if (state.recentBets.isEmpty)
             const Center(
               child: Text(
                 'No bets placed yet',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             )
           else
-            ...recentBets.map((bet) => _buildBetHistoryItem(bet)),
+            ...state.recentBets.map((bet) => _buildBetHistoryItem(bet)),
         ],
       ),
     );
@@ -357,7 +310,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildBetHistoryItem(BetModel bet) {
     final isWin = bet.status == BetStatus.won;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -390,10 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   '${_getBetStatusText(bet.status)} • ${_getTimeAgo(bet.placedAt)}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
@@ -411,10 +361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Text(
                 'Credits',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ],
           ),
@@ -436,9 +383,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _getTimeAgo(DateTime? dateTime) {
     if (dateTime == null) return 'Unknown';
-    
+
     final difference = DateTime.now().difference(dateTime);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
     } else if (difference.inHours > 0) {
@@ -453,21 +400,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _handleSignOut(BuildContext context) async {
     final shouldSignOut = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Sign Out'),
+            content: const Text('Are you sure you want to sign out?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.errorColor,
+                ),
+                child: const Text('Sign Out'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
     );
 
     if (shouldSignOut == true && mounted) {
@@ -493,21 +443,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildMenuItem(
-            'Following Teams',
-            Icons.favorite,
-            () {},
-          ),
-          _buildMenuItem(
-            'Betting History',
-            Icons.history,
-            () {},
-          ),
-          _buildMenuItem(
-            'Notifications',
-            Icons.notifications,
-            () {},
-          ),
+          _buildMenuItem('Following Teams', Icons.favorite, () {}),
+          _buildMenuItem('Betting History', Icons.history, () {}),
+          _buildMenuItem('Notifications', Icons.notifications, () {}),
           // Add dev tools for development
           _buildMenuItem(
             'Developer Tools',
@@ -517,16 +455,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               MaterialPageRoute(builder: (context) => const DevToolsScreen()),
             ),
           ),
-          _buildMenuItem(
-            'Help & Support',
-            Icons.help,
-            () {},
-          ),
-          _buildMenuItem(
-            'Privacy Policy',
-            Icons.privacy_tip,
-            () {},
-          ),
+          _buildMenuItem('Help & Support', Icons.help, () {}),
+          _buildMenuItem('Privacy Policy', Icons.privacy_tip, () {}),
           _buildMenuItem(
             'Sign Out',
             Icons.logout,

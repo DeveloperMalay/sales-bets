@@ -102,15 +102,20 @@ class FirestoreRepository {
 
   Future<List<EventModel>> getUpcomingEvents() async {
     try {
+      // Get all events first, then filter and sort in code to avoid index requirement
       final querySnapshot =
-          await FirebaseService.firestore
-              .collection('events')
-              .where('status', isEqualTo: 'upcoming')
-              .orderBy('startTime')
-              .get();
-      return querySnapshot.docs
-          .map((doc) => EventModel.fromJson({...doc.data(), 'id': doc.id}))
-          .toList();
+          await FirebaseService.firestore.collection('events').get();
+
+      final allEvents =
+          querySnapshot.docs
+              .map((doc) => EventModel.fromJson({...doc.data(), 'id': doc.id}))
+              .toList();
+
+      // Filter for upcoming events and sort by startTime
+      return allEvents
+          .where((event) => event.status == EventStatus.upcoming)
+          .toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
     } catch (e) {
       debugPrint('Error getting upcoming events: $e');
       return [];
@@ -169,15 +174,18 @@ class FirestoreRepository {
 
   Future<List<StreamModel>> getLiveStreams() async {
     try {
+      // Get all streams first, then filter and sort in code to avoid index requirement
       final querySnapshot =
-          await FirebaseService.firestore
-              .collection('streams')
-              .where('isLive', isEqualTo: true)
-              .orderBy('viewerCount', descending: true)
-              .get();
-      return querySnapshot.docs
-          .map((doc) => StreamModel.fromJson({...doc.data(), 'id': doc.id}))
-          .toList();
+          await FirebaseService.firestore.collection('streams').get();
+
+      final allStreams =
+          querySnapshot.docs
+              .map((doc) => StreamModel.fromJson({...doc.data(), 'id': doc.id}))
+              .toList();
+
+      // Filter for live streams and sort by viewerCount
+      return allStreams.where((stream) => stream.isLive).toList()
+        ..sort((a, b) => b.viewerCount.compareTo(a.viewerCount));
     } catch (e) {
       debugPrint('Error getting live streams: $e');
       return [];
@@ -285,19 +293,6 @@ class FirestoreRepository {
     }
   }
 
-  // Future<TeamModel?> getTeam(String teamId) async {
-  //   try {
-  //     final doc = await FirebaseService.teamsCollection.doc(teamId).get();
-  //     if (doc.exists) {
-  //       return TeamModel.fromJson(doc.data() as Map<String, dynamic>);
-  //     }
-  //     return null;
-  //   } catch (e) {
-  //     debugPrint('Error getting team: $e');
-  //     return null;
-  //   }
-  // }
-
   Stream<List<TeamModel>> getTeamsStream() {
     return FirebaseService.teamsCollection
         .orderBy('followers', descending: true)
@@ -331,23 +326,6 @@ class FirestoreRepository {
     }
   }
 
-  // Future<List<EventModel>> getLiveEvents() async {
-  //   try {
-  //     final query =
-  //         await FirebaseService.eventsCollection
-  //             .where('status', isEqualTo: EventStatus.live.name)
-  //             .orderBy('startTime', descending: false)
-  //             .get();
-
-  //     return query.docs
-  //         .map((doc) => EventModel.fromJson(doc.data() as Map<String, dynamic>))
-  //         .toList();
-  //   } catch (e) {
-  //     debugdebugPrint('Error getting live events: $e');
-  //     return [];
-  //   }
-  // }
-
   Stream<List<EventModel>> getEventsStream() {
     return FirebaseService.eventsCollection
         .orderBy('startTime', descending: false)
@@ -369,7 +347,7 @@ class FirestoreRepository {
       // Start a batch write
       final batch = FirebaseService.firestore.batch();
 
-      // Add bet document
+      // Add bet document to global bets collection
       final betRef = FirebaseService.betsCollection.doc(bet.id);
       batch.set(betRef, bet.toJson());
 
@@ -395,20 +373,64 @@ class FirestoreRepository {
 
   Future<List<BetModel>> getUserBets(String userId) async {
     try {
-      final query =
-          await FirebaseService.betsCollection
-              .where('userId', isEqualTo: userId)
-              .orderBy('placedAt', descending: true)
-              .get();
+      debugPrint('Getting bets for user: $userId');
+      final query = await FirebaseService.betsCollection
+          .where('userId', isEqualTo: userId)
+          .get();
 
-      return query.docs
-          .map((doc) => BetModel.fromJson(doc.data() as Map<String, dynamic>))
+      debugPrint('Found ${query.docs.length} bet documents for user $userId');
+
+      final bets = query.docs
+          .map((doc) {
+            final data = doc.data();
+            if (data == null) return null;
+            debugPrint('Processing bet document ${doc.id}: ${data.toString()}');
+            return BetModel.fromJson({...data as Map<String, dynamic>, 'id': doc.id});
+          })
+          .whereType<BetModel>()
           .toList();
+      
+      debugPrint('Successfully parsed ${bets.length} bets');
+      
+      // Sort by placedAt in code to avoid index requirement
+      bets.sort((a, b) {
+        final aTime = a.placedAt;
+        final bTime = b.placedAt;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
+      });
+      return bets;
     } catch (e) {
       debugPrint('Error getting user bets: $e');
       return [];
     }
   }
+
+  // Check if user has already bet on a specific event
+  Future<BetModel?> getUserBetForEvent(String userId, String eventId) async {
+    try {
+      final query = await FirebaseService.betsCollection
+          .where('userId', isEqualTo: userId)
+          .where('eventId', isEqualTo: eventId)
+          .limit(1)
+          .get();
+      
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+        final data = doc.data();
+        if (data != null) {
+          return BetModel.fromJson({...data as Map<String, dynamic>, 'id': doc.id});
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error checking user bet for event: $e');
+      return null;
+    }
+  }
+
 
   Future<void> resolveBet(
     String betId,
@@ -439,26 +461,6 @@ class FirestoreRepository {
       rethrow;
     }
   }
-
-  // Stream operations
-  // Future<List<StreamModel>> getLiveStreams() async {
-  //   try {
-  //     final query =
-  //         await FirebaseService.streamsCollection
-  //             .where('isLive', isEqualTo: true)
-  //             .orderBy('viewerCount', descending: true)
-  //             .get();
-
-  //     return query.docs
-  //         .map(
-  //           (doc) => StreamModel.fromJson(doc.data() as Map<String, dynamic>),
-  //         )
-  //         .toList();
-  //   } catch (e) {
-  //     debugPrint('Error getting live streams: $e');
-  //     return [];
-  //   }
-  // }
 
   Stream<List<StreamModel>> getLiveStreamsStream() {
     return FirebaseService.streamsCollection

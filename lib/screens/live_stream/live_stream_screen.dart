@@ -1,16 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:sales_bets/services/data/seed_data.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/stream/stream_model.dart';
 import '../stream/stream_viewer_screen.dart';
+import '../../services/api/firestore_repository.dart';
 
-class LiveStreamScreen extends StatelessWidget {
+class LiveStreamScreen extends StatefulWidget {
   const LiveStreamScreen({super.key});
 
-  // Use realistic seed data
-  static List<StreamModel> get _featuredStreams => SeedData.streams;
+  @override
+  State<LiveStreamScreen> createState() => _LiveStreamScreenState();
+}
+
+class _LiveStreamScreenState extends State<LiveStreamScreen> {
+  final FirestoreRepository _repository = FirestoreRepository();
+  List<StreamModel> _streams = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStreams();
+  }
+
+  Future<void> _loadStreams() async {
+    try {
+      final liveStreams = await _repository.getLiveStreams();
+      
+      if (mounted) {
+        setState(() {
+          _streams = liveStreams;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading streams: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,36 +53,52 @@ class LiveStreamScreen extends StatelessWidget {
           IconButton(icon: const Icon(Icons.notifications), onPressed: () {}),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FadeInDown(child: _buildFeaturedStream(context)),
-            const SizedBox(height: AppConstants.largeSpacing),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.mediumSpacing,
-              ),
-              child: FadeInLeft(
-                child: const Text(
-                  'All Live Streams',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadStreams,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_streams.isNotEmpty) ...[
+                      FadeInDown(child: _buildFeaturedStream(context)),
+                      const SizedBox(height: AppConstants.largeSpacing),
+                    ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.mediumSpacing,
+                      ),
+                      child: FadeInLeft(
+                        child: Text(
+                          _streams.isEmpty ? 'No Live Streams' : 'All Live Streams',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.mediumSpacing),
+                    if (_streams.isNotEmpty)
+                      FadeInUp(child: _buildStreamsList())
+                    else
+                      const Padding(
+                        padding: EdgeInsets.all(AppConstants.largeSpacing),
+                        child: Center(
+                          child: Text(
+                            'No live streams available at the moment.',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: AppConstants.mediumSpacing),
-            FadeInUp(child: _buildStreamsList()),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildFeaturedStream(BuildContext context) {
-    final featuredStream =
-        SeedData.getLiveStreams().isNotEmpty
-            ? SeedData.getLiveStreams().first
-            : _featuredStreams.first;
+    final featuredStream = _streams.first;
 
     return GestureDetector(
       onTap:
@@ -154,7 +202,7 @@ class LiveStreamScreen extends StatelessWidget {
   }
 
   Widget _buildStreamsList() {
-    final allStreams = _featuredStreams;
+    final allStreams = _streams;
 
     return ListView.builder(
       shrinkWrap: true,

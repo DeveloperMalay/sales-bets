@@ -6,9 +6,11 @@ import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
+import '../../models/bet/bet_model.dart';
 import '../onboarding/cubit/auth_bloc.dart';
 import 'cubit/betting_bloc.dart';
 import '../../widgets/animations/win_celebration.dart';
+import '../../services/api/firestore_repository.dart';
 
 class BettingScreen extends StatefulWidget {
   final EventModel event;
@@ -23,11 +25,40 @@ class _BettingScreenState extends State<BettingScreen> {
   String? selectedTeamId;
   int creditsToStake = 50;
   final TextEditingController _customAmountController = TextEditingController();
+  final FirestoreRepository _repository = FirestoreRepository();
+  BetModel? existingBet;
+  bool isLoadingExistingBet = true;
 
   @override
   void initState() {
-    context.read<HomeCubit>().getTeamsForEvent(widget.event);
     super.initState();
+    context.read<HomeCubit>().getTeamsForEvent(widget.event);
+    _checkExistingBet();
+  }
+
+  Future<void> _checkExistingBet() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      try {
+        final bet = await _repository.getUserBetForEvent(
+          authState.user.uid,
+          widget.event.id,
+        );
+        if (mounted) {
+          setState(() {
+            existingBet = bet;
+            isLoadingExistingBet = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error checking existing bet: $e');
+        if (mounted) {
+          setState(() {
+            isLoadingExistingBet = false;
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -61,19 +92,26 @@ class _BettingScreenState extends State<BettingScreen> {
             children: [
               FadeInDown(child: _buildEventCard()),
               const SizedBox(height: AppConstants.largeSpacing),
-              FadeInLeft(child: _buildNoLossExplanation()),
+              if (isLoadingExistingBet)
+                const Center(child: CircularProgressIndicator())
+              else if (existingBet != null)
+                FadeInLeft(child: _buildExistingBetCard())
+              else
+                FadeInLeft(child: _buildNoLossExplanation()),
               const SizedBox(height: AppConstants.largeSpacing),
-              FadeInUp(child: _buildTeamSelection()),
-              const SizedBox(height: AppConstants.largeSpacing),
-              FadeInUp(
-                delay: const Duration(milliseconds: 200),
-                child: _buildBetAmountSelection(),
-              ),
-              const SizedBox(height: AppConstants.largeSpacing),
-              FadeInUp(
-                delay: const Duration(milliseconds: 400),
-                child: _buildPotentialWinnings(),
-              ),
+              if (existingBet == null) ...[
+                FadeInUp(child: _buildTeamSelection()),
+                const SizedBox(height: AppConstants.largeSpacing),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 200),
+                  child: _buildBetAmountSelection(),
+                ),
+                const SizedBox(height: AppConstants.largeSpacing),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 400),
+                  child: _buildPotentialWinnings(),
+                ),
+              ],
               const SizedBox(height: AppConstants.extraLargeSpacing),
               FadeInUp(
                 delay: const Duration(milliseconds: 600),
@@ -143,6 +181,65 @@ class _BettingScreenState extends State<BettingScreen> {
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExistingBetCard() {
+    if (existingBet == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
+        border: Border.all(color: AppTheme.primaryColor, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppConstants.mediumSpacing),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'You Already Have a Bet!',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Staked: ${existingBet!.creditsStaked} credits • Status: ${existingBet!.status.toString().split('.').last.toUpperCase()}',
+                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                ),
+                if (existingBet!.status == BetStatus.won)
+                  Text(
+                    'Winnings: +${existingBet!.creditsWon} credits',
+                    style: const TextStyle(
+                      color: AppTheme.successColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -440,6 +537,7 @@ class _BettingScreenState extends State<BettingScreen> {
 
   Widget _buildPlaceBetButton() {
     final canPlaceBet =
+        existingBet == null && // Can't place bet if one already exists
         selectedTeamId != null &&
         creditsToStake >= AppConstants.minBetAmount &&
         creditsToStake <= AppConstants.maxBetAmount;
@@ -462,9 +560,9 @@ class _BettingScreenState extends State<BettingScreen> {
             child:
                 isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                      'Place No-Loss Bet',
-                      style: TextStyle(
+                    : Text(
+                      existingBet != null ? 'Bet Already Placed' : 'Place No-Loss Bet',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
