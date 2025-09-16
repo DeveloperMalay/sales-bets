@@ -348,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             )
           else
-            ...recentBets.map((bet) => _buildBetHistoryItem(bet)).toList(),
+            ...recentBets.map((bet) => _buildBetHistoryItem(bet)),
         ],
       ),
     );

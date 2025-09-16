@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/themes/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'cubits/theme/theme_cubit.dart';
@@ -13,7 +14,10 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+  
+  // Initialize Firebase with secure configuration
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
