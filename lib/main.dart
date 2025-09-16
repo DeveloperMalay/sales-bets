@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/themes/app_theme.dart';
+import 'core/constants/app_constants.dart';
+import 'cubits/theme/theme_cubit.dart';
+import 'cubits/navigation/navigation_cubit.dart';
+import 'blocs/auth/auth_bloc.dart';
+import 'services/api/firestore_repository.dart';
+import 'screens/onboarding/auth_wrapper.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  runApp(const SalesBetsApp());
+}
+
+class SalesBetsApp extends StatelessWidget {
+  const SalesBetsApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<FirestoreRepository>(
+          create: (context) => FirestoreRepository(),
+        ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (context) => ThemeCubit()),
+          BlocProvider(create: (context) => NavigationCubit()),
+          BlocProvider(
+            create: (context) => AuthBloc()..add(AuthCheckRequested()),
+          ),
+        ],
+        child: BlocBuilder<ThemeCubit, ThemeState>(
+          builder: (context, themeState) {
+            return MaterialApp(
+              title: AppConstants.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeState.themeMode,
+              home: const AuthWrapper(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "teams": [
+    {
+      "id": "team_1",
+      "name": "Thunder Hawks",
+      "description": "Elite gaming team specializing in strategy games",
+      "logoUrl": "https://via.placeholder.com/100x100/6C63FF/FFFFFF?text=TH",
+      "wins": 45,
+      "losses": 12,
+      "followers": 15420,
+      "totalEarnings": 125000,
+      "achievements": ["Championship 2024", "Best Strategy Team", "Most Followed"],
+      "isLive": true,
+      "createdAt": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "team_2", 
+      "name": "Cyber Wolves",
+      "description": "Professional esports team with multiple tournament wins",
+      "logoUrl": "https://via.placeholder.com/100x100/03DAC6/FFFFFF?text=CW",
+      "wins": 38,
+      "losses": 18,
+      "followers": 12850,
+      "totalEarnings": 98000,
+      "achievements": ["Regional Champions", "Fan Favorite"],
+      "isLive": false,
+      "createdAt": "2024-02-01T14:30:00Z"
+    },
+    {
+      "id": "team_3",
+      "name": "Digital Warriors",
+      "description": "Rising stars in the competitive gaming scene",
+      "logoUrl": "https://via.placeholder.com/100x100/FF6B6B/FFFFFF?text=DW",
+      "wins": 28,
+      "losses": 15,
+      "followers": 8900,
+      "totalEarnings": 56000,
+      "achievements": ["Rookie of the Year"],
+      "isLive": true,
+      "createdAt": "2024-03-10T09:15:00Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "event_1",
+      "title": "Championship Finals 2024",
+      "description": "The ultimate showdown between top teams",
+      "teamIds": ["team_1", "team_2"],
+      "startTime": "2024-12-20T18:00:00Z",
+      "status": "live",
+      "streamUrl": "https://example.com/stream1",
+      "bannerImageUrl": "https://via.placeholder.com/400x200/6C63FF/FFFFFF?text=FINALS",
+      "odds": {
+        "team_1": 1.8,
+        "team_2": 2.1
+      },
+      "totalBetsPlaced": 156,
+      "totalCreditsWagered": 15600,
+      "createdAt": "2024-12-01T12:00:00Z"
+    },
+    {
+      "id": "event_2",
+      "title": "Rising Stars Tournament",
+      "description": "New teams compete for recognition",
+      "teamIds": ["team_3", "team_1"],
+      "startTime": "2024-12-22T20:00:00Z",
+      "status": "upcoming",
+      "bannerImageUrl": "https://via.placeholder.com/400x200/03DAC6/FFFFFF?text=RISING",
+      "odds": {
+        "team_3": 2.5,
+        "team_1": 1.6
+      },
+      "totalBetsPlaced": 0,
+      "totalCreditsWagered": 0,
+      "createdAt": "2024-12-01T15:30:00Z"
+    }
+  ],
+  "streams": [
+    {
+      "id": "stream_1",
+      "title": "Championship Finals Live",
+      "teamId": "team_1",
+      "eventId": "event_1",
+      "streamUrl": "https://example.com/stream1",
+      "thumbnailUrl": "https://via.placeholder.com/320x180/6C63FF/FFFFFF?text=LIVE",
+      "viewerCount": 2847,
+      "isLive": true,
+      "chatMessages": [
+        {
+          "id": "msg_1",
+          "userId": "user_1",
+          "username": "GameFan123",
+          "message": "Thunder Hawks looking strong!",
+          "timestamp": "2024-12-20T18:15:00Z"
+        },
+        {
+          "id": "msg_2",
+          "userId": "user_2", 
+          "username": "EsportsLover",
+          "message": "This is going to be epic!",
+          "timestamp": "2024-12-20T18:16:00Z"
+        }
+      ],
+      "startedAt": "2024-12-20T18:00:00Z"
+    }
+  ]
+}
