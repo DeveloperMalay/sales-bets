@@ -28,19 +28,7 @@ class TrendingTeamCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
-          border: Border.all(
-            color: isFollowing 
-                ? AppTheme.primaryColor 
-                : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(color: AppTheme.primaryColor, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -52,18 +40,14 @@ class TrendingTeamCard extends StatelessWidget {
                 gradient: AppTheme.primaryGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.group,
-                color: Colors.white,
-                size: 24,
-              ),
+              child: const Icon(Icons.group, color: Colors.white, size: 24),
             ),
             const SizedBox(height: AppConstants.smallSpacing),
             Text(
               teamName,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -82,9 +66,10 @@ class TrendingTeamCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: isFollowing 
-                      ? AppTheme.successColor 
-                      : AppTheme.primaryColor,
+                  color:
+                      isFollowing
+                          ? AppTheme.successColor
+                          : AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

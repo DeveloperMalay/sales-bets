@@ -16,7 +16,7 @@ class StreamModel with _$StreamModel {
     @Default(false) bool isLive,
     @Default([]) List<ChatMessage> chatMessages,
     DateTime? startedAt,
-    DateTime? endedAt,
+    DateTime? endedAt, required String streamerName, required String description,
   }) = _StreamModel;
 
   factory StreamModel.fromJson(Map<String, dynamic> json) =>

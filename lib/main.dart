@@ -2,26 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import 'core/themes/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'cubits/theme/theme_cubit.dart';
 import 'cubits/navigation/navigation_cubit.dart';
 import 'blocs/auth/auth_bloc.dart';
+import 'blocs/betting/betting_bloc.dart';
 import 'services/api/firestore_repository.dart';
 import 'screens/onboarding/auth_wrapper.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables
   await dotenv.load(fileName: ".env");
-  
+
   // Initialize Firebase with secure configuration
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const SalesBetsApp());
 }
 
@@ -43,6 +43,13 @@ class SalesBetsApp extends StatelessWidget {
           BlocProvider(
             create: (context) => AuthBloc()..add(AuthCheckRequested()),
           ),
+          BlocProvider(
+            create:
+                (context) => BettingBloc(
+                  repository: context.read<FirestoreRepository>(),
+                ),
+          ),
+          BlocProvider(create: (context) => HomeCubit(FirestoreRepository())),
         ],
         child: BlocBuilder<ThemeCubit, ThemeState>(
           builder: (context, themeState) {

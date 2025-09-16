@@ -29,6 +29,8 @@ _$StreamModelImpl _$$StreamModelImplFromJson(Map<String, dynamic> json) =>
           json['endedAt'] == null
               ? null
               : DateTime.parse(json['endedAt'] as String),
+      streamerName: json['streamerName'] as String,
+      description: json['description'] as String,
     );
 
 Map<String, dynamic> _$$StreamModelImplToJson(_$StreamModelImpl instance) =>
@@ -44,6 +46,8 @@ Map<String, dynamic> _$$StreamModelImplToJson(_$StreamModelImpl instance) =>
       'chatMessages': instance.chatMessages,
       'startedAt': instance.startedAt?.toIso8601String(),
       'endedAt': instance.endedAt?.toIso8601String(),
+      'streamerName': instance.streamerName,
+      'description': instance.description,
     };
 
 _$ChatMessageImpl _$$ChatMessageImplFromJson(Map<String, dynamic> json) =>

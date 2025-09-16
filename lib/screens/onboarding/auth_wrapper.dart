@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/auth/auth_bloc.dart';
-import '../../widgets/common/main_wrapper.dart';
+import 'onboarding_wrapper.dart';
 import 'login_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -20,7 +20,7 @@ class AuthWrapper extends StatelessWidget {
         }
         
         if (state is AuthAuthenticated) {
-          return const MainWrapper();
+          return const OnboardingWrapper();
         }
         
         return const LoginScreen();

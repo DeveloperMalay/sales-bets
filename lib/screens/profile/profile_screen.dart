@@ -7,6 +7,7 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../services/api/firestore_repository.dart';
 import '../../models/user/user_model.dart';
 import '../../models/bet/bet_model.dart';
+import '../dev/dev_tools_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -506,6 +507,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Notifications',
             Icons.notifications,
             () {},
+          ),
+          // Add dev tools for development
+          _buildMenuItem(
+            'Developer Tools',
+            Icons.build,
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DevToolsScreen()),
+            ),
           ),
           _buildMenuItem(
             'Help & Support',

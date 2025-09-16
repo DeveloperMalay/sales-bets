@@ -32,6 +32,8 @@ mixin _$StreamModel {
   List<ChatMessage> get chatMessages => throw _privateConstructorUsedError;
   DateTime? get startedAt => throw _privateConstructorUsedError;
   DateTime? get endedAt => throw _privateConstructorUsedError;
+  String get streamerName => throw _privateConstructorUsedError;
+  String get description => throw _privateConstructorUsedError;
 
   /// Serializes this StreamModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -62,6 +64,8 @@ abstract class $StreamModelCopyWith<$Res> {
     List<ChatMessage> chatMessages,
     DateTime? startedAt,
     DateTime? endedAt,
+    String streamerName,
+    String description,
   });
 }
 
@@ -91,6 +95,8 @@ class _$StreamModelCopyWithImpl<$Res, $Val extends StreamModel>
     Object? chatMessages = null,
     Object? startedAt = freezed,
     Object? endedAt = freezed,
+    Object? streamerName = null,
+    Object? description = null,
   }) {
     return _then(
       _value.copyWith(
@@ -149,6 +155,16 @@ class _$StreamModelCopyWithImpl<$Res, $Val extends StreamModel>
                     ? _value.endedAt
                     : endedAt // ignore: cast_nullable_to_non_nullable
                         as DateTime?,
+            streamerName:
+                null == streamerName
+                    ? _value.streamerName
+                    : streamerName // ignore: cast_nullable_to_non_nullable
+                        as String,
+            description:
+                null == description
+                    ? _value.description
+                    : description // ignore: cast_nullable_to_non_nullable
+                        as String,
           )
           as $Val,
     );
@@ -176,6 +192,8 @@ abstract class _$$StreamModelImplCopyWith<$Res>
     List<ChatMessage> chatMessages,
     DateTime? startedAt,
     DateTime? endedAt,
+    String streamerName,
+    String description,
   });
 }
 
@@ -204,6 +222,8 @@ class __$$StreamModelImplCopyWithImpl<$Res>
     Object? chatMessages = null,
     Object? startedAt = freezed,
     Object? endedAt = freezed,
+    Object? streamerName = null,
+    Object? description = null,
   }) {
     return _then(
       _$StreamModelImpl(
@@ -262,6 +282,16 @@ class __$$StreamModelImplCopyWithImpl<$Res>
                 ? _value.endedAt
                 : endedAt // ignore: cast_nullable_to_non_nullable
                     as DateTime?,
+        streamerName:
+            null == streamerName
+                ? _value.streamerName
+                : streamerName // ignore: cast_nullable_to_non_nullable
+                    as String,
+        description:
+            null == description
+                ? _value.description
+                : description // ignore: cast_nullable_to_non_nullable
+                    as String,
       ),
     );
   }
@@ -282,6 +312,8 @@ class _$StreamModelImpl implements _StreamModel {
     final List<ChatMessage> chatMessages = const [],
     this.startedAt,
     this.endedAt,
+    required this.streamerName,
+    required this.description,
   }) : _chatMessages = chatMessages;
 
   factory _$StreamModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -318,10 +350,14 @@ class _$StreamModelImpl implements _StreamModel {
   final DateTime? startedAt;
   @override
   final DateTime? endedAt;
+  @override
+  final String streamerName;
+  @override
+  final String description;
 
   @override
   String toString() {
-    return 'StreamModel(id: $id, title: $title, teamId: $teamId, eventId: $eventId, streamUrl: $streamUrl, thumbnailUrl: $thumbnailUrl, viewerCount: $viewerCount, isLive: $isLive, chatMessages: $chatMessages, startedAt: $startedAt, endedAt: $endedAt)';
+    return 'StreamModel(id: $id, title: $title, teamId: $teamId, eventId: $eventId, streamUrl: $streamUrl, thumbnailUrl: $thumbnailUrl, viewerCount: $viewerCount, isLive: $isLive, chatMessages: $chatMessages, startedAt: $startedAt, endedAt: $endedAt, streamerName: $streamerName, description: $description)';
   }
 
   @override
@@ -346,7 +382,11 @@ class _$StreamModelImpl implements _StreamModel {
             ) &&
             (identical(other.startedAt, startedAt) ||
                 other.startedAt == startedAt) &&
-            (identical(other.endedAt, endedAt) || other.endedAt == endedAt));
+            (identical(other.endedAt, endedAt) || other.endedAt == endedAt) &&
+            (identical(other.streamerName, streamerName) ||
+                other.streamerName == streamerName) &&
+            (identical(other.description, description) ||
+                other.description == description));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -364,6 +404,8 @@ class _$StreamModelImpl implements _StreamModel {
     const DeepCollectionEquality().hash(_chatMessages),
     startedAt,
     endedAt,
+    streamerName,
+    description,
   );
 
   /// Create a copy of StreamModel
@@ -393,6 +435,8 @@ abstract class _StreamModel implements StreamModel {
     final List<ChatMessage> chatMessages,
     final DateTime? startedAt,
     final DateTime? endedAt,
+    required final String streamerName,
+    required final String description,
   }) = _$StreamModelImpl;
 
   factory _StreamModel.fromJson(Map<String, dynamic> json) =
@@ -420,6 +464,10 @@ abstract class _StreamModel implements StreamModel {
   DateTime? get startedAt;
   @override
   DateTime? get endedAt;
+  @override
+  String get streamerName;
+  @override
+  String get description;
 
   /// Create a copy of StreamModel
   /// with the given fields replaced by the non-null parameter values.
