@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
@@ -8,7 +9,6 @@ import '../../widgets/cards/event_card.dart';
 import '../../widgets/cards/trending_team_card.dart';
 import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
-import '../../screens/betting/betting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,9 +47,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             FadeInDown(child: _buildHeader(context)),
                             const SizedBox(height: AppConstants.largeSpacing),
-                            FadeInLeft(child: _buildWalletCard(context)),
+                            FadeInLeft(child: _buildWalletCard(context, state)),
                             const SizedBox(height: AppConstants.largeSpacing),
-                            FadeInUp(child: _buildSectionTitle('Live Events')),
+                            FadeInUp(
+                              child: _buildSectionTitle(
+                                'Live & Upcoming Events',
+                              ),
+                            ),
                             const SizedBox(height: AppConstants.mediumSpacing),
                             FadeInUp(
                               delay: const Duration(milliseconds: 200),
@@ -106,7 +110,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWalletCard(BuildContext context) {
+  Widget _buildWalletCard(BuildContext context, HomeState state) {
+    final formattedCredits = _formatNumber(state.userCredits);
+    final todayEarnings = state.todayEarnings;
+    final isPositive = todayEarnings >= 0;
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -122,9 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: AppConstants.smallSpacing),
-          const Text(
-            '1,000',
-            style: TextStyle(
+          Text(
+            formattedCredits,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -133,19 +141,35 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: AppConstants.smallSpacing),
           Row(
             children: [
-              const Icon(Icons.trending_up, color: Colors.white, size: 16),
+              Icon(
+                isPositive ? Icons.trending_up : Icons.trending_down,
+                color: Colors.white,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(
-                '+50 today',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.white),
+                todayEarnings == 0
+                    ? 'No activity today'
+                    : '${isPositive ? '+' : ''}${_formatNumber(todayEarnings)} today',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    } else {
+      return number.toString();
+    }
   }
 
   Widget _buildSectionTitle(String title) {
@@ -176,12 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isLive: event.status == EventStatus.live,
               onTap: () async {
                 if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BettingScreen(event: event),
-                    ),
-                  );
+                  context.pushNamed('betting', extra: event);
                 }
               },
             ),

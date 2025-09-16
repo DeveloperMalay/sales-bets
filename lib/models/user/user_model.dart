@@ -14,6 +14,7 @@ class UserModel with _$UserModel {
     @Default([]) List<String> followedTeamIds,
     @Default([]) List<String> betIds,
     @Default(0) int totalWins,
+    @Default(0) int totalLosses,
     @Default(0) int totalEarnings,
     DateTime? createdAt,
     DateTime? lastLoginAt,

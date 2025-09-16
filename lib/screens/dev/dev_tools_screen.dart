@@ -1,6 +1,13 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sales_bets/models/bet/bet_model.dart';
 import '../../core/themes/app_theme.dart';
 import '../../services/data/data_seeder.dart';
+import '../../services/api/firestore_repository.dart';
+import '../../services/real_time_bet_service.dart';
+import '../../models/event/event_model.dart';
+import '../../models/team/team_model.dart';
 
 class DevToolsScreen extends StatefulWidget {
   const DevToolsScreen({super.key});
@@ -11,14 +18,33 @@ class DevToolsScreen extends StatefulWidget {
 
 class _DevToolsScreenState extends State<DevToolsScreen> {
   final DataSeeder _seeder = DataSeeder();
+  final FirestoreRepository _repository = FirestoreRepository();
+  final RealTimeBetService _betService = RealTimeBetService();
   bool _isLoading = false;
   String _statusMessage = '';
   Map<String, int> _dataStats = {};
+  List<EventModel> _availableEvents = [];
+  List<TeamModel> _teams = [];
 
   @override
   void initState() {
     super.initState();
     _loadDataStats();
+    _loadEventsAndTeams();
+    _initializeBetService();
+  }
+
+  void _initializeBetService() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _betService.initialize(context, user.uid);
+    }
+  }
+
+  @override
+  void dispose() {
+    _betService.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDataStats() async {
@@ -26,6 +52,19 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
     setState(() {
       _dataStats = stats;
     });
+  }
+
+  Future<void> _loadEventsAndTeams() async {
+    try {
+      final events = await _repository.getAllEvents();
+      final teams = await _repository.getAllTeams();
+      setState(() {
+        _availableEvents = events; // Show all events to see status changes
+        _teams = teams;
+      });
+    } catch (e) {
+      debugPrint('Error loading events and teams: $e');
+    }
   }
 
   Future<void> _seedData() async {
@@ -91,6 +130,86 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
     }
   }
 
+  Future<void> _endEventWithRandomWinner(EventModel event) async {
+    final eventTeams =
+        _teams.where((team) => event.teamIds.contains(team.id)).toList();
+
+    if (eventTeams.isEmpty) {
+      setState(() {
+        _statusMessage = '❌ No teams found for this event';
+      });
+      return;
+    }
+
+    // Random winner algorithm
+    final random = Random();
+    final winnerTeam = eventTeams[random.nextInt(eventTeams.length)];
+
+    setState(() {
+      _isLoading = true;
+      _statusMessage =
+          '🎲 Running random winner algorithm for "${event.title}"...';
+    });
+
+    // Add a small delay to show the algorithm is "running"
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    try {
+      // Complete the event directly via repository to ensure it works
+      await _repository.completeEvent(event.id, winnerTeam.id);
+
+      // Give a short delay for the real-time listeners to catch the changes
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      await _loadEventsAndTeams(); // Refresh the events list
+      setState(() {
+        _statusMessage =
+            '🎉 Event "${event.title}" completed!\n'
+            '🏆 Random Winner: ${winnerTeam.name}\n'
+            '📊 Algorithm picked ${winnerTeam.name} from ${eventTeams.length} teams\n'
+            '✅ Check your notifications for bet results!';
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _statusMessage = '❌ Error completing event: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _createQuickTestBet(EventModel event, TeamModel team) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _statusMessage = '❌ No authenticated user found';
+      });
+      return;
+    }
+
+    try {
+      final bet = BetModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: user.uid,
+        eventId: event.id,
+        teamId: team.id,
+        creditsStaked: 500, // Test with 500 credits
+        placedAt: DateTime.now(),
+      );
+
+      await _repository.placeBet(bet);
+
+      setState(() {
+        _statusMessage =
+            '✅ Quick bet placed! 500 credits on ${team.name} for "${event.title}"';
+      });
+    } catch (e) {
+      setState(() {
+        _statusMessage = '❌ Error creating quick bet: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,6 +229,8 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
               _buildDataStatsCard(),
               const SizedBox(height: 24),
               _buildActionsCard(),
+              const SizedBox(height: 24),
+              _buildTestingCard(),
               const SizedBox(height: 24),
               if (_statusMessage.isNotEmpty) _buildStatusCard(),
             ],
@@ -294,6 +415,186 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTestingCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.emoji_events, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text(
+                  'Event Testing',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '1. Create a test bet on any event (optional - for testing)\n'
+              '2. Click "End Event" to randomly pick a winner\n'
+              '3. Watch for win/loss notifications and check your credits',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+
+            if (_availableEvents.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: const Text(
+                  'No available events found. Please seed data first.',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              )
+            else
+              Column(
+                children:
+                    _availableEvents
+                        .map((event) => _buildSimpleEventCard(event))
+                        .toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleEventCard(EventModel event) {
+    final eventTeams =
+        _teams.where((team) => event.teamIds.contains(team.id)).toList();
+    final isCompleted = event.status == EventStatus.completed;
+    final winnerTeam =
+        event.winnerId != null
+            ? _teams.firstWhere(
+              (t) => t.id == event.winnerId,
+              orElse:
+                  () => TeamModel(
+                    id: '',
+                    name: 'Unknown',
+                    followers: 0,
+                    wins: 0,
+                    isLive: false,
+                    description: '',
+                  ),
+            )
+            : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isCompleted ? Colors.green.shade300 : Colors.grey.shade300,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        color: isCompleted ? Colors.green.shade50 : Colors.grey.shade50,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isCompleted && winnerTeam != null
+                      ? 'Winner: ${winnerTeam.name} 🏆'
+                      : 'Teams: ${eventTeams.map((t) => t.name).join(', ')}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isCompleted ? Colors.green.shade700 : Colors.grey,
+                    fontWeight:
+                        isCompleted ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isCompleted
+                            ? Colors.green.withOpacity(0.1)
+                            : event.status == EventStatus.live
+                            ? Colors.red.withOpacity(0.1)
+                            : Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    event.status.name.toUpperCase(),
+                    style: TextStyle(
+                      color:
+                          isCompleted
+                              ? Colors.green
+                              : event.status == EventStatus.live
+                              ? Colors.red
+                              : Colors.blue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (!isCompleted && eventTeams.isNotEmpty) ...[
+            ElevatedButton.icon(
+              onPressed:
+                  _isLoading
+                      ? null
+                      : () => _createQuickTestBet(event, eventTeams.first),
+              icon: const Icon(Icons.add_circle_outline, size: 16),
+              label: const Text('Quick Bet'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          ElevatedButton.icon(
+            onPressed:
+                isCompleted || _isLoading
+                    ? null
+                    : () => _endEventWithRandomWinner(event),
+            icon: Icon(
+              isCompleted ? Icons.check_circle : Icons.casino,
+              size: 20,
+            ),
+            label: Text(isCompleted ? 'Completed' : 'End Event'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isCompleted ? Colors.green : Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import 'package:sales_bets/screens/teams/cubit/teams_cubit.dart';
 import 'core/themes/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'core/routing/app_router.dart';
 import 'cubits/theme/theme_cubit.dart';
 import 'cubits/navigation/navigation_cubit.dart';
 import 'screens/onboarding/cubit/auth_bloc.dart';
 import 'screens/betting/cubit/betting_bloc.dart';
 import 'services/api/firestore_repository.dart';
-import 'screens/onboarding/auth_wrapper.dart';
+import 'services/push_notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -23,6 +25,9 @@ void main() async {
 
   // Initialize Firebase with secure configuration
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Set up Firebase Messaging background handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(const SalesBetsApp());
 }
@@ -65,13 +70,13 @@ class SalesBetsApp extends StatelessWidget {
         ],
         child: BlocBuilder<ThemeCubit, ThemeState>(
           builder: (context, themeState) {
-            return MaterialApp(
+            return MaterialApp.router(
               title: AppConstants.appName,
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeState.themeMode,
-              home: const AuthWrapper(),
+              routerConfig: AppRouter.router,
             );
           },
         ),

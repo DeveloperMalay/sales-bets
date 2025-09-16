@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/stream/stream_model.dart';
-import '../stream/stream_viewer_screen.dart';
 import '../../services/api/firestore_repository.dart';
 
 class LiveStreamScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   Future<void> _loadStreams() async {
     try {
       final liveStreams = await _repository.getLiveStreams();
-      
+
       if (mounted) {
         setState(() {
           _streams = liveStreams;
@@ -48,52 +48,68 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Streams'),
+        backgroundColor: AppTheme.lightBackground,
+        title: const Text(
+          'Live Streams',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {},
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadStreams,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_streams.isNotEmpty) ...[
-                      FadeInDown(child: _buildFeaturedStream(context)),
-                      const SizedBox(height: AppConstants.largeSpacing),
-                    ],
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.mediumSpacing,
-                      ),
-                      child: FadeInLeft(
-                        child: Text(
-                          _streams.isEmpty ? 'No Live Streams' : 'All Live Streams',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _loadStreams,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_streams.isNotEmpty) ...[
+                        FadeInDown(child: _buildFeaturedStream(context)),
+                        const SizedBox(height: AppConstants.largeSpacing),
+                      ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.mediumSpacing,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: AppConstants.mediumSpacing),
-                    if (_streams.isNotEmpty)
-                      FadeInUp(child: _buildStreamsList())
-                    else
-                      const Padding(
-                        padding: EdgeInsets.all(AppConstants.largeSpacing),
-                        child: Center(
+                        child: FadeInLeft(
                           child: Text(
-                            'No live streams available at the moment.',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                            textAlign: TextAlign.center,
+                            _streams.isEmpty
+                                ? 'No Live Streams'
+                                : 'All Live Streams',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                  ],
+                      const SizedBox(height: AppConstants.mediumSpacing),
+                      if (_streams.isNotEmpty)
+                        FadeInUp(child: _buildStreamsList())
+                      else
+                        const Padding(
+                          padding: EdgeInsets.all(AppConstants.largeSpacing),
+                          child: Center(
+                            child: Text(
+                              'No live streams available at the moment.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
     );
   }
 
@@ -101,13 +117,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     final featuredStream = _streams.first;
 
     return GestureDetector(
-      onTap:
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StreamViewerScreen(stream: featuredStream),
-            ),
-          ),
+      onTap: () => context.pushNamed('stream', extra: featuredStream),
       child: Container(
         width: double.infinity,
         height: 250,
@@ -224,13 +234,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     final isLive = stream.isLive;
 
     return GestureDetector(
-      onTap:
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StreamViewerScreen(stream: stream),
-            ),
-          ),
+      onTap: () => context.pushNamed('stream', extra: stream),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
         decoration: BoxDecoration(

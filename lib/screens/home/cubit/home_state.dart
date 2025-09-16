@@ -8,6 +8,8 @@ class HomeState extends Equatable {
   final List<EventModel> events;
   final List<TeamModel> trendingTeams;
   final List<TeamModel> eventSpecificTeams;
+  final int userCredits;
+  final int todayEarnings;
 
   const HomeState({
     required this.status,
@@ -15,6 +17,8 @@ class HomeState extends Equatable {
     required this.events,
     required this.trendingTeams,
     required this.eventSpecificTeams,
+    required this.userCredits,
+    required this.todayEarnings,
   });
 
   factory HomeState.initial() {
@@ -24,6 +28,8 @@ class HomeState extends Equatable {
       events: [],
       trendingTeams: [],
       eventSpecificTeams: [],
+      userCredits: 0,
+      todayEarnings: 0,
     );
   }
 
@@ -34,6 +40,8 @@ class HomeState extends Equatable {
     events,
     trendingTeams,
     eventSpecificTeams,
+    userCredits,
+    todayEarnings,
   ];
 
   HomeState copyWith({
@@ -42,6 +50,8 @@ class HomeState extends Equatable {
     List<EventModel>? events,
     List<TeamModel>? trendingTeams,
     List<TeamModel>? eventSpecificTeams,
+    int? userCredits,
+    int? todayEarnings,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -49,6 +59,8 @@ class HomeState extends Equatable {
       events: events ?? this.events,
       trendingTeams: trendingTeams ?? this.trendingTeams,
       eventSpecificTeams: eventSpecificTeams ?? this.eventSpecificTeams,
+      userCredits: userCredits ?? this.userCredits,
+      todayEarnings: todayEarnings ?? this.todayEarnings,
     );
   }
 }

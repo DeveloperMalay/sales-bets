@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sales_bets/models/team/team_model.dart';
+import 'package:sales_bets/models/user/user_model.dart';
 import 'package:sales_bets/screens/teams/cubit/teams_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
@@ -27,9 +28,13 @@ class _TeamsScreenState extends State<TeamsScreen> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Teams'),
+            backgroundColor: Colors.white,
+            title: const Text('Teams', style: TextStyle(color: Colors.black)),
             actions: [
-              IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.black),
+                onPressed: () {},
+              ),
             ],
           ),
           body: DefaultTabController(
@@ -56,7 +61,9 @@ class _TeamsScreenState extends State<TeamsScreen> {
                               FadeInLeft(
                                 child: _buildTeamsList(teams: state.teams),
                               ),
-                              FadeInRight(child: _buildLeaderboard()),
+                              FadeInRight(
+                                child: _buildLeaderboard(state.leaderboard),
+                              ),
                             ],
                           ),
                         ),
@@ -189,26 +196,46 @@ class _TeamsScreenState extends State<TeamsScreen> {
     );
   }
 
-  Widget _buildLeaderboard() {
+  Widget _buildLeaderboard(List<UserModel> leaderboard) {
+    if (leaderboard.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppConstants.largeSpacing),
+          child: Text(
+            'No leaderboard data available yet.\nStart betting to see rankings!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-      itemCount: 10,
+      itemCount: leaderboard.length,
       itemBuilder: (context, index) {
         return FadeInUp(
           delay: Duration(milliseconds: index * 100),
-          child: _buildLeaderboardItem(index),
+          child: _buildLeaderboardItem(leaderboard[index], index),
         );
       },
     );
   }
 
-  Widget _buildLeaderboardItem(int index) {
+  Widget _buildLeaderboardItem(UserModel user, int index) {
     final rank = index + 1;
     Color rankColor = Colors.grey;
 
     if (rank == 1) rankColor = Colors.amber;
     if (rank == 2) rankColor = Colors.grey[400]!;
     if (rank == 3) rankColor = Colors.brown;
+
+    // Get user's name - use displayName or fall back to email
+    String userName = user.displayName;
+    if (userName.contains('@')) {
+      // If it's an email, take the part before @
+      userName = userName.split('@').first;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
@@ -232,14 +259,23 @@ class _TeamsScreenState extends State<TeamsScreen> {
             height: 40,
             decoration: BoxDecoration(color: rankColor, shape: BoxShape.circle),
             child: Center(
-              child: Text(
-                '#$rank',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
+              child:
+                  rank <= 3
+                      ? Icon(
+                        rank == 1
+                            ? Icons.workspace_premium
+                            : Icons.emoji_events,
+                        color: Colors.white,
+                        size: 20,
+                      )
+                      : Text(
+                        '#$rank',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
             ),
           ),
           const SizedBox(width: AppConstants.mediumSpacing),
@@ -250,7 +286,16 @@ class _TeamsScreenState extends State<TeamsScreen> {
               gradient: AppTheme.primaryGradient,
               borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
             ),
-            child: const Icon(Icons.group, color: Colors.white, size: 25),
+            child: Center(
+              child: Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: AppConstants.mediumSpacing),
           Expanded(
@@ -258,14 +303,15 @@ class _TeamsScreenState extends State<TeamsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Team ${String.fromCharCode(65 + index)}',
+                  userName,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${(10 - index) * 1250} credits earned',
+                  '${user.totalEarnings} credits earned',
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ],
@@ -275,14 +321,14 @@ class _TeamsScreenState extends State<TeamsScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${(10 - index) * 25} wins',
+                '${user.totalWins} wins',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppTheme.successColor,
                 ),
               ),
               Text(
-                '${index * 5} losses',
+                '${user.totalLosses} losses',
                 style: const TextStyle(color: AppTheme.errorColor),
               ),
             ],

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Color Palette
-  static const Color primaryColor = Color(0xFF6C63FF);
-  static const Color secondaryColor = Color(0xFF03DAC6);
-  static const Color accentColor = Color(0xFFFF6B6B);
+  static const Color primaryColor = Color(0xFF6C5CE7);
+  static const Color secondaryColor = Color(0xFFA29BFE);
+  static const Color accentColor = Color(0xFF74B9FF);
   static const Color successColor = Color(0xFF4CAF50);
   static const Color warningColor = Color(0xFFFF9800);
   static const Color errorColor = Color(0xFFF44336);
@@ -15,13 +15,13 @@ class AppTheme {
   static const Color darkCard = Color(0xFF2D2D2D);
 
   // Light Theme Colors
-  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightBackground = Color(0xFFF8F9FA);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightCard = Color(0xFFFFFFFF);
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primaryColor, Color(0xFF9B59B6)],
+    colors: [primaryColor, primaryColor],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -97,7 +97,7 @@ class AppTheme {
       background: darkBackground,
       error: errorColor,
     ),
-    scaffoldBackgroundColor: darkBackground,
+    scaffoldBackgroundColor: lightBackground,
     appBarTheme: const AppBarTheme(
       backgroundColor: darkSurface,
       elevation: 0,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/storage/preferences_service.dart';
-import '../../widgets/common/main_wrapper.dart';
 import 'onboarding_walkthrough.dart';
 
 class OnboardingWrapper extends StatefulWidget {
@@ -69,7 +69,13 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> {
       );
     }
 
-    return const MainWrapper();
+    // Redirect to home via router
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.go('/home');
+      }
+    });
+    return const SizedBox.shrink();
   }
 }
 
@@ -430,9 +436,7 @@ class _OnboardingWalkthroughWithCallbackState extends State<OnboardingWalkthroug
     if (widget.onCompleted != null) {
       widget.onCompleted!();
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainWrapper()),
-      );
+      context.go('/home');
     }
   }
 }

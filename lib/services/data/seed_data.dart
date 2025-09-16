@@ -8,7 +8,8 @@ class SeedData {
     TeamModel(
       id: 'team1',
       name: 'Revenue Riders',
-      description: 'Enterprise software sales team specializing in SaaS solutions',
+      description:
+          'Enterprise software sales team specializing in SaaS solutions',
       wins: 23,
       followers: 4782,
       totalEarnings: 2840000,
@@ -18,7 +19,8 @@ class SeedData {
     TeamModel(
       id: 'team2',
       name: 'Quota Crushers',
-      description: 'High-performing B2B sales professionals in the fintech space',
+      description:
+          'High-performing B2B sales professionals in the fintech space',
       wins: 31,
       followers: 6234,
       totalEarnings: 3650000,
@@ -92,13 +94,15 @@ class SeedData {
     EventModel(
       id: 'event1',
       title: 'Q1 Revenue Challenge',
-      description: 'Who will hit the highest quarterly revenue? Teams compete to maximize sales performance in the first quarter.',
+      description:
+          'Who will hit the highest quarterly revenue? Teams compete to maximize sales performance in the first quarter.',
       teamIds: ['team1', 'team2', 'team4'],
       startTime: DateTime.now().add(const Duration(hours: 3)),
       endTime: DateTime.now().add(const Duration(days: 90)),
       status: EventStatus.upcoming,
       streamUrl: 'https://stream.salesbets.com/q1-revenue',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/0066CC/FFFFFF?text=Q1+Revenue+Challenge',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/0066CC/FFFFFF?text=Q1+Revenue+Challenge',
       odds: {'team1': 2.1, 'team2': 1.8, 'team4': 2.4},
       totalBetsPlaced: 234,
       totalCreditsWagered: 45600,
@@ -107,13 +111,15 @@ class SeedData {
     EventModel(
       id: 'event2',
       title: 'Cold Call Championship',
-      description: 'The ultimate test of prospecting skills. Teams compete to book the most qualified meetings through cold outreach.',
+      description:
+          'The ultimate test of prospecting skills. Teams compete to book the most qualified meetings through cold outreach.',
       teamIds: ['team3', 'team5', 'team7'],
       startTime: DateTime.now().subtract(const Duration(minutes: 45)),
       endTime: DateTime.now().add(const Duration(days: 14)),
       status: EventStatus.live,
       streamUrl: 'https://stream.salesbets.com/cold-call-championship',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/FF6B35/FFFFFF?text=Cold+Call+Championship',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/FF6B35/FFFFFF?text=Cold+Call+Championship',
       odds: {'team3': 3.2, 'team5': 2.7, 'team7': 2.1},
       totalBetsPlaced: 567,
       totalCreditsWagered: 89300,
@@ -122,13 +128,15 @@ class SeedData {
     EventModel(
       id: 'event3',
       title: 'Enterprise Deal Derby',
-      description: 'Major account showdown! Teams race to close the largest enterprise deals. Minimum deal size: \$50K.',
+      description:
+          'Major account showdown! Teams race to close the largest enterprise deals. Minimum deal size: \$50K.',
       teamIds: ['team1', 'team6', 'team8'],
       startTime: DateTime.now().add(const Duration(days: 2)),
       endTime: DateTime.now().add(const Duration(days: 45)),
-      status: EventStatus.upcoming,
+      status: EventStatus.live,
       streamUrl: 'https://stream.salesbets.com/enterprise-derby',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/7B68EE/FFFFFF?text=Enterprise+Deal+Derby',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/7B68EE/FFFFFF?text=Enterprise+Deal+Derby',
       odds: {'team1': 1.9, 'team6': 2.8, 'team8': 2.3},
       totalBetsPlaced: 123,
       totalCreditsWagered: 28900,
@@ -137,13 +145,15 @@ class SeedData {
     EventModel(
       id: 'event4',
       title: 'New Client Acquisition Sprint',
-      description: 'Two-week intensive competition to onboard the most new clients. Quality and quantity both matter.',
+      description:
+          'Two-week intensive competition to onboard the most new clients. Quality and quantity both matter.',
       teamIds: ['team2', 'team4', 'team5'],
       startTime: DateTime.now().add(const Duration(days: 7)),
       endTime: DateTime.now().add(const Duration(days: 21)),
       status: EventStatus.upcoming,
       streamUrl: 'https://stream.salesbets.com/client-sprint',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/00CED1/FFFFFF?text=New+Client+Sprint',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/00CED1/FFFFFF?text=New+Client+Sprint',
       odds: {'team2': 2.0, 'team4': 2.2, 'team5': 2.6},
       totalBetsPlaced: 89,
       totalCreditsWagered: 15400,
@@ -152,13 +162,15 @@ class SeedData {
     EventModel(
       id: 'event5',
       title: 'Referral Network Bonanza',
-      description: 'Generate the most qualified referrals from existing customers. Relationship building at its finest.',
+      description:
+          'Generate the most qualified referrals from existing customers. Relationship building at its finest.',
       teamIds: ['team3', 'team6', 'team7'],
       startTime: DateTime.now().subtract(const Duration(days: 3)),
       endTime: DateTime.now().add(const Duration(days: 25)),
       status: EventStatus.live,
       streamUrl: 'https://stream.salesbets.com/referral-bonanza',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/FF1493/FFFFFF?text=Referral+Bonanza',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/FF1493/FFFFFF?text=Referral+Bonanza',
       odds: {'team3': 2.4, 'team6': 1.7, 'team7': 3.1},
       totalBetsPlaced: 445,
       totalCreditsWagered: 72100,
@@ -167,13 +179,15 @@ class SeedData {
     EventModel(
       id: 'event6',
       title: 'Demo Conversion Masters',
-      description: 'From demo to deal! Teams compete to achieve the highest demo-to-close conversion rate.',
+      description:
+          'From demo to deal! Teams compete to achieve the highest demo-to-close conversion rate.',
       teamIds: ['team1', 'team3', 'team8'],
       startTime: DateTime.now().add(const Duration(hours: 18)),
       endTime: DateTime.now().add(const Duration(days: 30)),
       status: EventStatus.upcoming,
       streamUrl: 'https://stream.salesbets.com/demo-masters',
-      bannerImageUrl: 'https://via.placeholder.com/800x400/32CD32/FFFFFF?text=Demo+Conversion+Masters',
+      bannerImageUrl:
+          'https://via.placeholder.com/800x400/32CD32/FFFFFF?text=Demo+Conversion+Masters',
       odds: {'team1': 1.6, 'team3': 2.9, 'team8': 2.2},
       totalBetsPlaced: 178,
       totalCreditsWagered: 31200,
@@ -186,11 +200,13 @@ class SeedData {
     StreamModel(
       id: 'stream1',
       title: 'Q1 Revenue Challenge - Live Leaderboard',
-      description: 'Watch real-time revenue updates as teams battle for quarterly supremacy',
+      description:
+          'Watch real-time revenue updates as teams battle for quarterly supremacy',
       teamId: 'team1',
       eventId: 'event1',
       streamUrl: 'https://stream.salesbets.com/q1-revenue',
-      thumbnailUrl: 'https://via.placeholder.com/400x225/0066CC/FFFFFF?text=Q1+Revenue+Live',
+      thumbnailUrl:
+          'https://via.placeholder.com/400x225/0066CC/FFFFFF?text=Q1+Revenue+Live',
       viewerCount: 2847,
       isLive: true,
       streamerName: 'Sales Arena',
@@ -199,11 +215,13 @@ class SeedData {
     StreamModel(
       id: 'stream2',
       title: 'Cold Call Championship Finals',
-      description: 'The most intense cold calling session you\'ve ever seen - live coaching included',
+      description:
+          'The most intense cold calling session you\'ve ever seen - live coaching included',
       teamId: 'team3',
       eventId: 'event2',
       streamUrl: 'https://stream.salesbets.com/cold-call-championship',
-      thumbnailUrl: 'https://via.placeholder.com/400x225/FF6B35/FFFFFF?text=Cold+Call+Live',
+      thumbnailUrl:
+          'https://via.placeholder.com/400x225/FF6B35/FFFFFF?text=Cold+Call+Live',
       viewerCount: 1923,
       isLive: true,
       streamerName: 'Prospecting Pro',
@@ -212,10 +230,12 @@ class SeedData {
     StreamModel(
       id: 'stream3',
       title: 'Pipeline Pioneers Training Session',
-      description: 'Behind-the-scenes look at how the Pipeline Pioneers prepare for competitions',
+      description:
+          'Behind-the-scenes look at how the Pipeline Pioneers prepare for competitions',
       teamId: 'team4',
       streamUrl: 'https://stream.salesbets.com/pipeline-training',
-      thumbnailUrl: 'https://via.placeholder.com/400x225/00CED1/FFFFFF?text=Training+Session',
+      thumbnailUrl:
+          'https://via.placeholder.com/400x225/00CED1/FFFFFF?text=Training+Session',
       viewerCount: 856,
       isLive: true,
       streamerName: 'Pipeline Pioneers',
@@ -224,11 +244,13 @@ class SeedData {
     StreamModel(
       id: 'stream4',
       title: 'Referral Network Workshop',
-      description: 'Learn the secrets of building powerful referral networks from the pros',
+      description:
+          'Learn the secrets of building powerful referral networks from the pros',
       teamId: 'team6',
       eventId: 'event5',
       streamUrl: 'https://stream.salesbets.com/referral-workshop',
-      thumbnailUrl: 'https://via.placeholder.com/400x225/FF1493/FFFFFF?text=Referral+Workshop',
+      thumbnailUrl:
+          'https://via.placeholder.com/400x225/FF1493/FFFFFF?text=Referral+Workshop',
       viewerCount: 1234,
       isLive: false,
       streamerName: 'Network Ninja',
@@ -238,10 +260,12 @@ class SeedData {
     StreamModel(
       id: 'stream5',
       title: 'Commission Kings Luxury Sales Masterclass',
-      description: 'High-end sales techniques for luxury products and premium clients',
+      description:
+          'High-end sales techniques for luxury products and premium clients',
       teamId: 'team8',
       streamUrl: 'https://stream.salesbets.com/luxury-masterclass',
-      thumbnailUrl: 'https://via.placeholder.com/400x225/8A2BE2/FFFFFF?text=Luxury+Sales',
+      thumbnailUrl:
+          'https://via.placeholder.com/400x225/8A2BE2/FFFFFF?text=Luxury+Sales',
       viewerCount: 567,
       isLive: false,
       streamerName: 'Luxury Sales Expert',
@@ -257,7 +281,9 @@ class SeedData {
 
   // Get upcoming events
   static List<EventModel> getUpcomingEvents() {
-    return events.where((event) => event.status == EventStatus.upcoming).toList();
+    return events
+        .where((event) => event.status == EventStatus.upcoming)
+        .toList();
   }
 
   // Get top performing teams by wins

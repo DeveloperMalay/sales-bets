@@ -29,6 +29,7 @@ mixin _$UserModel {
   List<String> get followedTeamIds => throw _privateConstructorUsedError;
   List<String> get betIds => throw _privateConstructorUsedError;
   int get totalWins => throw _privateConstructorUsedError;
+  int get totalLosses => throw _privateConstructorUsedError;
   int get totalEarnings => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get lastLoginAt => throw _privateConstructorUsedError;
@@ -57,6 +58,7 @@ abstract class $UserModelCopyWith<$Res> {
     List<String> followedTeamIds,
     List<String> betIds,
     int totalWins,
+    int totalLosses,
     int totalEarnings,
     DateTime? createdAt,
     DateTime? lastLoginAt,
@@ -86,6 +88,7 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? followedTeamIds = null,
     Object? betIds = null,
     Object? totalWins = null,
+    Object? totalLosses = null,
     Object? totalEarnings = null,
     Object? createdAt = freezed,
     Object? lastLoginAt = freezed,
@@ -132,6 +135,11 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
                     ? _value.totalWins
                     : totalWins // ignore: cast_nullable_to_non_nullable
                         as int,
+            totalLosses:
+                null == totalLosses
+                    ? _value.totalLosses
+                    : totalLosses // ignore: cast_nullable_to_non_nullable
+                        as int,
             totalEarnings:
                 null == totalEarnings
                     ? _value.totalEarnings
@@ -171,6 +179,7 @@ abstract class _$$UserModelImplCopyWith<$Res>
     List<String> followedTeamIds,
     List<String> betIds,
     int totalWins,
+    int totalLosses,
     int totalEarnings,
     DateTime? createdAt,
     DateTime? lastLoginAt,
@@ -199,6 +208,7 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? followedTeamIds = null,
     Object? betIds = null,
     Object? totalWins = null,
+    Object? totalLosses = null,
     Object? totalEarnings = null,
     Object? createdAt = freezed,
     Object? lastLoginAt = freezed,
@@ -245,6 +255,11 @@ class __$$UserModelImplCopyWithImpl<$Res>
                 ? _value.totalWins
                 : totalWins // ignore: cast_nullable_to_non_nullable
                     as int,
+        totalLosses:
+            null == totalLosses
+                ? _value.totalLosses
+                : totalLosses // ignore: cast_nullable_to_non_nullable
+                    as int,
         totalEarnings:
             null == totalEarnings
                 ? _value.totalEarnings
@@ -277,6 +292,7 @@ class _$UserModelImpl implements _UserModel {
     final List<String> followedTeamIds = const [],
     final List<String> betIds = const [],
     this.totalWins = 0,
+    this.totalLosses = 0,
     this.totalEarnings = 0,
     this.createdAt,
     this.lastLoginAt,
@@ -320,6 +336,9 @@ class _$UserModelImpl implements _UserModel {
   final int totalWins;
   @override
   @JsonKey()
+  final int totalLosses;
+  @override
+  @JsonKey()
   final int totalEarnings;
   @override
   final DateTime? createdAt;
@@ -328,7 +347,7 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, displayName: $displayName, profileImageUrl: $profileImageUrl, credits: $credits, followedTeamIds: $followedTeamIds, betIds: $betIds, totalWins: $totalWins, totalEarnings: $totalEarnings, createdAt: $createdAt, lastLoginAt: $lastLoginAt)';
+    return 'UserModel(id: $id, email: $email, displayName: $displayName, profileImageUrl: $profileImageUrl, credits: $credits, followedTeamIds: $followedTeamIds, betIds: $betIds, totalWins: $totalWins, totalLosses: $totalLosses, totalEarnings: $totalEarnings, createdAt: $createdAt, lastLoginAt: $lastLoginAt)';
   }
 
   @override
@@ -350,6 +369,8 @@ class _$UserModelImpl implements _UserModel {
             const DeepCollectionEquality().equals(other._betIds, _betIds) &&
             (identical(other.totalWins, totalWins) ||
                 other.totalWins == totalWins) &&
+            (identical(other.totalLosses, totalLosses) ||
+                other.totalLosses == totalLosses) &&
             (identical(other.totalEarnings, totalEarnings) ||
                 other.totalEarnings == totalEarnings) &&
             (identical(other.createdAt, createdAt) ||
@@ -370,6 +391,7 @@ class _$UserModelImpl implements _UserModel {
     const DeepCollectionEquality().hash(_followedTeamIds),
     const DeepCollectionEquality().hash(_betIds),
     totalWins,
+    totalLosses,
     totalEarnings,
     createdAt,
     lastLoginAt,
@@ -399,6 +421,7 @@ abstract class _UserModel implements UserModel {
     final List<String> followedTeamIds,
     final List<String> betIds,
     final int totalWins,
+    final int totalLosses,
     final int totalEarnings,
     final DateTime? createdAt,
     final DateTime? lastLoginAt,
@@ -423,6 +446,8 @@ abstract class _UserModel implements UserModel {
   List<String> get betIds;
   @override
   int get totalWins;
+  @override
+  int get totalLosses;
   @override
   int get totalEarnings;
   @override

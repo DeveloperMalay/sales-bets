@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../onboarding/cubit/auth_bloc.dart';
 import '../../models/bet/bet_model.dart';
-import '../dev/dev_tools_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,9 +38,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Profile'),
+            backgroundColor: AppTheme.primaryColor,
+            title: Text(
+              'Profile',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+            ),
             actions: [
-              IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
+              IconButton(
+                icon: const Icon(Icons.settings, color: Colors.white),
+                onPressed: () {},
+              ),
             ],
           ),
           body:
@@ -445,15 +454,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _buildMenuItem('Following Teams', Icons.favorite, () {}),
           _buildMenuItem('Betting History', Icons.history, () {}),
+          _buildMenuItem(
+            'Achievements',
+            Icons.emoji_events,
+            () => context.pushNamed('achievements'),
+          ),
           _buildMenuItem('Notifications', Icons.notifications, () {}),
           // Add dev tools for development
           _buildMenuItem(
             'Developer Tools',
             Icons.build,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const DevToolsScreen()),
-            ),
+            () => context.pushNamed('dev-tools'),
           ),
           _buildMenuItem('Help & Support', Icons.help, () {}),
           _buildMenuItem('Privacy Policy', Icons.privacy_tip, () {}),

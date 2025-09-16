@@ -24,6 +24,7 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       totalWins: (json['totalWins'] as num?)?.toInt() ?? 0,
+      totalLosses: (json['totalLosses'] as num?)?.toInt() ?? 0,
       totalEarnings: (json['totalEarnings'] as num?)?.toInt() ?? 0,
       createdAt:
           json['createdAt'] == null
@@ -45,6 +46,7 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
       'followedTeamIds': instance.followedTeamIds,
       'betIds': instance.betIds,
       'totalWins': instance.totalWins,
+      'totalLosses': instance.totalLosses,
       'totalEarnings': instance.totalEarnings,
       'createdAt': instance.createdAt?.toIso8601String(),
       'lastLoginAt': instance.lastLoginAt?.toIso8601String(),

@@ -223,6 +223,29 @@ class FirestoreRepository {
     }
   }
 
+  // Get leaderboard - top users by total earnings
+  Future<List<UserModel>> getLeaderboard({int limit = 20}) async {
+    try {
+      final query =
+          await FirebaseService.usersCollection
+              .orderBy('totalEarnings', descending: true)
+              .limit(limit)
+              .get();
+
+      return query.docs
+          .map(
+            (doc) => UserModel.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting leaderboard: $e');
+      return [];
+    }
+  }
+
   Future<void> updateUser(UserModel user) async {
     try {
       await FirebaseService.usersCollection.doc(user.id).update(user.toJson());
@@ -341,6 +364,37 @@ class FirestoreRepository {
         );
   }
 
+  // Real-time bet updates
+  Stream<List<BetModel>> getBetsStream(String userId) {
+    return FirebaseService.betsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('placedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map(
+                (doc) => BetModel.fromJson({
+                  ...doc.data() as Map<String, dynamic>,
+                  'id': doc.id,
+                }),
+              )
+              .toList();
+        });
+  }
+
+  Stream<BetModel?> getBetStream(String betId) {
+    return FirebaseService.betsCollection.doc(betId).snapshots().map((doc) {
+      if (doc.exists) {
+        return BetModel.fromJson({
+          ...doc.data() as Map<String, dynamic>,
+          'id': doc.id,
+        });
+      }
+      return null;
+    });
+  }
+
+
   // Betting operations
   Future<void> placeBet(BetModel bet) async {
     try {
@@ -374,24 +428,31 @@ class FirestoreRepository {
   Future<List<BetModel>> getUserBets(String userId) async {
     try {
       debugPrint('Getting bets for user: $userId');
-      final query = await FirebaseService.betsCollection
-          .where('userId', isEqualTo: userId)
-          .get();
+      final query =
+          await FirebaseService.betsCollection
+              .where('userId', isEqualTo: userId)
+              .get();
 
       debugPrint('Found ${query.docs.length} bet documents for user $userId');
 
-      final bets = query.docs
-          .map((doc) {
-            final data = doc.data();
-            if (data == null) return null;
-            debugPrint('Processing bet document ${doc.id}: ${data.toString()}');
-            return BetModel.fromJson({...data as Map<String, dynamic>, 'id': doc.id});
-          })
-          .whereType<BetModel>()
-          .toList();
-      
+      final bets =
+          query.docs
+              .map((doc) {
+                final data = doc.data();
+                if (data == null) return null;
+                debugPrint(
+                  'Processing bet document ${doc.id}: ${data.toString()}',
+                );
+                return BetModel.fromJson({
+                  ...data as Map<String, dynamic>,
+                  'id': doc.id,
+                });
+              })
+              .whereType<BetModel>()
+              .toList();
+
       debugPrint('Successfully parsed ${bets.length} bets');
-      
+
       // Sort by placedAt in code to avoid index requirement
       bets.sort((a, b) {
         final aTime = a.placedAt;
@@ -411,17 +472,21 @@ class FirestoreRepository {
   // Check if user has already bet on a specific event
   Future<BetModel?> getUserBetForEvent(String userId, String eventId) async {
     try {
-      final query = await FirebaseService.betsCollection
-          .where('userId', isEqualTo: userId)
-          .where('eventId', isEqualTo: eventId)
-          .limit(1)
-          .get();
-      
+      final query =
+          await FirebaseService.betsCollection
+              .where('userId', isEqualTo: userId)
+              .where('eventId', isEqualTo: eventId)
+              .limit(1)
+              .get();
+
       if (query.docs.isNotEmpty) {
         final doc = query.docs.first;
         final data = doc.data();
         if (data != null) {
-          return BetModel.fromJson({...data as Map<String, dynamic>, 'id': doc.id});
+          return BetModel.fromJson({
+            ...data as Map<String, dynamic>,
+            'id': doc.id,
+          });
         }
       }
       return null;
@@ -430,7 +495,6 @@ class FirestoreRepository {
       return null;
     }
   }
-
 
   Future<void> resolveBet(
     String betId,
@@ -449,15 +513,145 @@ class FirestoreRepository {
         final bet = await FirebaseService.betsCollection.doc(betId).get();
         final betData = bet.data() as Map<String, dynamic>;
         final userId = betData['userId'] as String;
+        final creditsStaked = betData['creditsStaked'] as int;
+
+        // Calculate net winnings (profit only, not including original stake)
+        final netWinnings = creditsWon - creditsStaked;
 
         await FirebaseService.usersCollection.doc(userId).update({
-          'credits': FieldValue.increment(creditsWon),
+          'credits': FieldValue.increment(netWinnings), // Only add profit
           'totalWins': FieldValue.increment(1),
-          'totalEarnings': FieldValue.increment(creditsWon),
+          'totalEarnings': FieldValue.increment(netWinnings), // Only count profit as earnings
+        });
+      } else if (status == BetStatus.lost) {
+        // Update loss count but don't deduct credits (no-loss mechanic)
+        final bet = await FirebaseService.betsCollection.doc(betId).get();
+        final betData = bet.data() as Map<String, dynamic>;
+        final userId = betData['userId'] as String;
+
+        await FirebaseService.usersCollection.doc(userId).update({
+          'totalLosses': FieldValue.increment(1),
         });
       }
     } catch (e) {
       debugPrint('Error resolving bet: $e');
+      rethrow;
+    }
+  }
+
+  // Automatic event resolution and bet processing
+  Future<void> resolveEventBets(String eventId, String winnerId) async {
+    try {
+      debugPrint('Resolving bets for event: $eventId, winner: $winnerId');
+
+      // Get all bets for this event
+      final betsQuery =
+          await FirebaseService.betsCollection
+              .where('eventId', isEqualTo: eventId)
+              .where('status', isEqualTo: 'pending')
+              .get();
+
+      if (betsQuery.docs.isEmpty) {
+        debugPrint('No pending bets found for event: $eventId');
+        return;
+      }
+
+      final batch = FirebaseService.firestore.batch();
+      final userUpdates = <String, Map<String, dynamic>>{};
+
+      for (final doc in betsQuery.docs) {
+        final betData = doc.data() as Map<String, dynamic>;
+        final bet = BetModel.fromJson({...betData, 'id': doc.id});
+
+        final isWinner = bet.teamId == winnerId;
+        final newStatus = isWinner ? BetStatus.won : BetStatus.lost;
+        final creditsWon =
+            isWinner ? (bet.creditsStaked * 2) : 0; // 2x return for wins
+
+        // Update bet document
+        batch.update(doc.reference, {
+          'status': newStatus.name,
+          'creditsWon': creditsWon,
+          'resolvedAt': FieldValue.serverTimestamp(),
+        });
+
+        // Prepare user updates
+        final userId = bet.userId;
+        if (!userUpdates.containsKey(userId)) {
+          userUpdates[userId] = {
+            'totalWins': 0,
+            'totalLosses': 0,
+            'totalEarnings': 0,
+            'credits': 0,
+          };
+        }
+
+        if (isWinner) {
+          userUpdates[userId]!['totalWins'] = FieldValue.increment(1);
+          // Calculate net winnings (profit only, not including original stake)
+          final netWinnings = creditsWon - bet.creditsStaked;
+          userUpdates[userId]!['totalEarnings'] = FieldValue.increment(netWinnings);
+          // Only add the net winnings to credits (no-loss mechanic)
+          userUpdates[userId]!['credits'] = FieldValue.increment(netWinnings);
+        } else {
+          userUpdates[userId]!['totalLosses'] = FieldValue.increment(1);
+          // No credit deduction for losses (no-loss mechanic)
+        }
+      }
+
+      // Update all users' stats
+      for (final entry in userUpdates.entries) {
+        final userRef = FirebaseService.usersCollection.doc(entry.key);
+        batch.update(userRef, entry.value);
+      }
+
+      // Update event status
+      final eventRef = FirebaseService.eventsCollection.doc(eventId);
+      batch.update(eventRef, {
+        'status': EventStatus.completed.name,
+        'winnerId': winnerId,
+        'endTime': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+      debugPrint(
+        'Successfully resolved ${betsQuery.docs.length} bets for event: $eventId',
+      );
+    } catch (e) {
+      debugPrint('Error resolving event bets: $e');
+      rethrow;
+    }
+  }
+
+  // Listen for event status changes and auto-resolve bets
+  Stream<List<EventModel>> getCompletedEventsStream() {
+    return FirebaseService.eventsCollection
+        .where('status', isEqualTo: EventStatus.completed.name)
+        .where(
+          'endTime',
+          isGreaterThan: Timestamp.fromDate(
+            DateTime.now().subtract(const Duration(minutes: 5)),
+          ),
+        )
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map(
+                (doc) => EventModel.fromJson({
+                  ...doc.data() as Map<String, dynamic>,
+                  'id': doc.id,
+                }),
+              )
+              .toList();
+        });
+  }
+
+  // Mark event as completed and trigger bet resolution
+  Future<void> completeEvent(String eventId, String winnerId) async {
+    try {
+      await resolveEventBets(eventId, winnerId);
+    } catch (e) {
+      debugPrint('Error completing event: $e');
       rethrow;
     }
   }
