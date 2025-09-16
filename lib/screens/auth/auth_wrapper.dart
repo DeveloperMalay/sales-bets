@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'cubit/auth_bloc.dart';
-import 'onboarding_wrapper.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
+import '../onboarding/onboarding_wrapper.dart';
 import 'login_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -9,20 +9,18 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) {
-        if (state is AuthLoading) {
+        if (state.status == AuthStatus.loading) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        
-        if (state is AuthAuthenticated) {
+
+        if (state.status == AuthStatus.loaded && state.user != null) {
           return const OnboardingWrapper();
         }
-        
+
         return const LoginScreen();
       },
     );

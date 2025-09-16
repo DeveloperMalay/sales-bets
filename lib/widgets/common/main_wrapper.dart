@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../cubits/navigation/navigation_cubit.dart';
 import '../../services/real_time_bet_service.dart';
 import 'bottom_navigation_widget.dart';
 
 class MainWrapper extends StatefulWidget {
   final Widget child;
-  
-  const MainWrapper({
-    super.key,
-    required this.child,
-  });
+
+  const MainWrapper({super.key, required this.child});
 
   @override
   State<MainWrapper> createState() => _MainWrapperState();

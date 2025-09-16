@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import '../../cubits/navigation/navigation_cubit.dart';
 import '../../core/themes/app_theme.dart';
 
 class BottomNavigationWidget extends StatelessWidget {
@@ -12,7 +10,7 @@ class BottomNavigationWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentLocation = GoRouterState.of(context).matchedLocation;
     final selectedIndex = _getSelectedIndex(currentLocation);
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: AppTheme.primaryGradient,

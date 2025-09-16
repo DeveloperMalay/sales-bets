@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final formattedCredits = _formatNumber(state.userCredits);
     final todayEarnings = state.todayEarnings;
     final isPositive = todayEarnings >= 0;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -151,9 +151,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 todayEarnings == 0
                     ? 'No activity today'
                     : '${isPositive ? '+' : ''}${_formatNumber(todayEarnings)} today',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.white),
               ),
             ],
           ),
@@ -182,52 +182,61 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEventsList({required HomeState state}) {
     return SizedBox(
       height: 200,
-      child: ListView.builder(
-        shrinkWrap: true,
-        scrollDirection: Axis.horizontal,
-        itemCount: state.events.length,
-        itemBuilder: (context, index) {
-          final event = state.events[index];
+      child:
+          state.events.isEmpty
+              ? Text('No events available at the moment.')
+              : ListView.builder(
+                shrinkWrap: true,
+                scrollDirection: Axis.horizontal,
+                itemCount: state.events.length,
+                itemBuilder: (context, index) {
+                  final event = state.events[index];
 
-          return Padding(
-            padding: const EdgeInsets.only(
-              right: AppConstants.mediumSpacing,
-              bottom: AppConstants.smallSpacing,
-            ),
-            child: EventCard(
-              title: event.title,
-              teams: event.teamIds,
-              isLive: event.status == EventStatus.live,
-              onTap: () async {
-                if (mounted) {
-                  context.pushNamed('betting', extra: event);
-                }
-              },
-            ),
-          );
-        },
-      ),
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      right: AppConstants.mediumSpacing,
+                      bottom: AppConstants.smallSpacing,
+                    ),
+                    child: EventCard(
+                      title: event.title,
+                      teams: event.teamIds,
+                      isLive: event.status == EventStatus.live,
+                      onTap: () async {
+                        if (mounted) {
+                          context.pushNamed('betting', extra: event);
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
     );
   }
 
   Widget _buildTrendingTeams({required List<TeamModel> teams}) {
     return SizedBox(
       height: 160,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: teams.length,
-        itemBuilder: (context, index) {
-          final team = teams[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: AppConstants.mediumSpacing),
-            child: TrendingTeamCard(
-              teamName: team.name,
-              followers: '${(team.followers / 1000).toStringAsFixed(1)}K',
-              isFollowing: false,
-            ),
-          );
-        },
-      ),
+      child:
+          teams.isEmpty
+              ? Text('No trending teams available.')
+              : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: teams.length,
+                itemBuilder: (context, index) {
+                  final team = teams[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      right: AppConstants.mediumSpacing,
+                    ),
+                    child: TrendingTeamCard(
+                      teamName: team.name,
+                      followers:
+                          '${(team.followers / 1000).toStringAsFixed(1)}K',
+                      isFollowing: false,
+                    ),
+                  );
+                },
+              ),
     );
   }
 }

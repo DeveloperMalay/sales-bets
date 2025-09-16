@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
-import '../onboarding/cubit/auth_bloc.dart';
 import '../../models/bet/bet_model.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -18,10 +18,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<ProfileCubit>().loadUserProfile(authState.user.uid);
-    }
+    final authState = context.read<AuthCubit>().state;
+    context.read<ProfileCubit>().loadUserProfile(authState.user?.uid ?? '');
     super.initState();
   }
 
@@ -430,7 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (shouldSignOut == true && mounted) {
-      context.read<AuthBloc>().add(AuthSignOutRequested());
+      context.read<AuthCubit>().signOut();
     }
   }
 

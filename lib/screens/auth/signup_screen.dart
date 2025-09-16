@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
-import 'cubit/auth_bloc.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -33,20 +33,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: BlocListener<AuthBloc, AuthState>(
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state is AuthError) {
+          if (state.status == AuthStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text(state.errorMessage ?? 'An error occurred'),
                 backgroundColor: AppTheme.errorColor,
               ),
             );
-          } else if (state is AuthAuthenticated) {
+          } else if (state.status == AuthStatus.loaded && state.user != null) {
             Navigator.of(context).pop();
           }
         },
@@ -58,29 +55,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FadeInDown(
-                    child: _buildHeader(),
-                  ),
+                  FadeInDown(child: _buildHeader()),
                   const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInLeft(
-                    child: _buildNameField(),
-                  ),
+                  FadeInLeft(child: _buildNameField()),
                   const SizedBox(height: AppConstants.mediumSpacing),
-                  FadeInRight(
-                    child: _buildEmailField(),
-                  ),
+                  FadeInRight(child: _buildEmailField()),
                   const SizedBox(height: AppConstants.mediumSpacing),
-                  FadeInLeft(
-                    child: _buildPasswordField(),
-                  ),
+                  FadeInLeft(child: _buildPasswordField()),
                   const SizedBox(height: AppConstants.mediumSpacing),
-                  FadeInRight(
-                    child: _buildConfirmPasswordField(),
-                  ),
+                  FadeInRight(child: _buildConfirmPasswordField()),
                   const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInUp(
-                    child: _buildSignUpButton(),
-                  ),
+                  FadeInUp(child: _buildSignUpButton()),
                   const SizedBox(height: AppConstants.mediumSpacing),
                   FadeInUp(
                     delay: const Duration(milliseconds: 200),
@@ -224,10 +209,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Widget _buildSignUpButton() {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) {
-        final isLoading = state is AuthLoading;
-        
+        final isLoading = state.status == AuthStatus.loading;
+
         return SizedBox(
           width: double.infinity,
           height: 56,
@@ -239,16 +224,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
               ),
             ),
-            child: isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text(
-                    'Create Account',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+            child:
+                isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
           ),
         );
       },
@@ -283,13 +269,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
-            AuthSignUpRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              displayName: _nameController.text.trim(),
-            ),
-          );
+      context.read<AuthCubit>().signUp(
+        fullName: _nameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
     }
   }
 }

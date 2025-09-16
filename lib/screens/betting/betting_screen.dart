@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
 import '../../models/bet/bet_model.dart';
-import '../onboarding/cubit/auth_bloc.dart';
 import 'cubit/betting_bloc.dart';
 import '../../widgets/animations/win_celebration.dart';
 import '../../services/api/firestore_repository.dart';
@@ -37,11 +37,11 @@ class _BettingScreenState extends State<BettingScreen> {
   }
 
   Future<void> _checkExistingBet() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
+    final authState = context.read<AuthCubit>().state;
+    if (authState.user != null) {
       try {
         final bet = await _repository.getUserBetForEvent(
-          authState.user.uid,
+          authState.user?.uid ?? '',
           widget.event.id,
         );
         if (mounted) {
@@ -189,7 +189,7 @@ class _BettingScreenState extends State<BettingScreen> {
 
   Widget _buildExistingBetCard() {
     if (existingBet == null) return const SizedBox.shrink();
-    
+
     return Container(
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
       decoration: BoxDecoration(
@@ -561,7 +561,9 @@ class _BettingScreenState extends State<BettingScreen> {
                 isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                      existingBet != null ? 'Bet Already Placed' : 'Place No-Loss Bet',
+                      existingBet != null
+                          ? 'Bet Already Placed'
+                          : 'Place No-Loss Bet',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -575,8 +577,8 @@ class _BettingScreenState extends State<BettingScreen> {
   }
 
   void _placeBet() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return;
+    final authState = context.read<AuthCubit>().state;
+    if (authState.user == null) return;
 
     if (selectedTeamId != null) {
       final state = context.read<HomeCubit>().state;
@@ -587,7 +589,7 @@ class _BettingScreenState extends State<BettingScreen> {
 
       context.read<BettingBloc>().add(
         PlaceBetRequested(
-          userId: authState.user.uid,
+          userId: authState.user?.uid ?? '',
           eventId: widget.event.id,
           teamId: selectedTeamId!,
           creditsStaked: creditsToStake,

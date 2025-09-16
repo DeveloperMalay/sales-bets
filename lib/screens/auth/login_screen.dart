@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
-import 'cubit/auth_bloc.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import 'signup_screen.dart';
@@ -29,12 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
+      body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state is AuthError) {
+          if (state.status == AuthStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text(state.errorMessage ?? 'An error occurred'),
                 backgroundColor: AppTheme.errorColor,
               ),
             );
@@ -49,21 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: AppConstants.extraLargeSpacing),
-                  FadeInDown(
-                    child: _buildHeader(),
-                  ),
+                  FadeInDown(child: _buildHeader()),
                   const SizedBox(height: AppConstants.extraLargeSpacing),
-                  FadeInLeft(
-                    child: _buildEmailField(),
-                  ),
+                  FadeInLeft(child: _buildEmailField()),
                   const SizedBox(height: AppConstants.mediumSpacing),
-                  FadeInRight(
-                    child: _buildPasswordField(),
-                  ),
+                  FadeInRight(child: _buildPasswordField()),
                   const SizedBox(height: AppConstants.largeSpacing),
-                  FadeInUp(
-                    child: _buildLoginButton(),
-                  ),
+                  FadeInUp(child: _buildLoginButton()),
                   const SizedBox(height: AppConstants.mediumSpacing),
                   FadeInUp(
                     delay: const Duration(milliseconds: 200),
@@ -96,10 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
-        Text(
-          'Welcome Back!',
-          style: Theme.of(context).textTheme.headlineLarge,
-        ),
+        Text('Welcome Back!', style: Theme.of(context).textTheme.headlineLarge),
         Text(
           'Sign in to continue your winning streak',
           style: Theme.of(context).textTheme.bodyMedium,
@@ -165,10 +154,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginButton() {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) {
-        final isLoading = state is AuthLoading;
-        
+        final isLoading = state.status == AuthStatus.loading;
+
         return SizedBox(
           width: double.infinity,
           height: 56,
@@ -180,16 +169,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
               ),
             ),
-            child: isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text(
-                    'Sign In',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+            child:
+                isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
           ),
         );
       },
@@ -208,9 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
           GestureDetector(
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SignUpScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SignUpScreen()),
               );
             },
             child: const Text(
@@ -228,12 +216,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
-            AuthSignInRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+      context.read<AuthCubit>().signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
     }
   }
 }

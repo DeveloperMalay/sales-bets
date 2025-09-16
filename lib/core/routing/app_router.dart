@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../screens/onboarding/login_screen.dart';
-import '../../screens/onboarding/signup_screen.dart';
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/signup_screen.dart';
 import '../../screens/onboarding/onboarding_wrapper.dart';
 import '../../widgets/common/main_wrapper.dart';
 import '../../screens/home/home_screen.dart';

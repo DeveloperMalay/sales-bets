@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import 'package:sales_bets/screens/profile/cubit/profile_cubit.dart';
 import 'package:sales_bets/screens/teams/cubit/teams_cubit.dart';
@@ -11,7 +12,6 @@ import 'core/constants/app_constants.dart';
 import 'core/routing/app_router.dart';
 import 'cubits/theme/theme_cubit.dart';
 import 'cubits/navigation/navigation_cubit.dart';
-import 'screens/onboarding/cubit/auth_bloc.dart';
 import 'screens/betting/cubit/betting_bloc.dart';
 import 'services/api/firestore_repository.dart';
 import 'services/push_notification_service.dart';
@@ -47,9 +47,7 @@ class SalesBetsApp extends StatelessWidget {
         providers: [
           BlocProvider(create: (context) => ThemeCubit()),
           BlocProvider(create: (context) => NavigationCubit()),
-          BlocProvider(
-            create: (context) => AuthBloc()..add(AuthCheckRequested()),
-          ),
+          BlocProvider(create: (context) => AuthCubit()),
           BlocProvider(
             create:
                 (context) => BettingBloc(

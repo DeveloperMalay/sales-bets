@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/stream/stream_model.dart';
-import '../onboarding/cubit/auth_bloc.dart';
 
 class StreamViewerScreen extends StatefulWidget {
   final StreamModel stream;
 
-  const StreamViewerScreen({
-    super.key,
-    required this.stream,
-  });
+  const StreamViewerScreen({super.key, required this.stream});
 
   @override
   State<StreamViewerScreen> createState() => _StreamViewerScreenState();
@@ -23,13 +20,13 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
   final ScrollController _chatScrollController = ScrollController();
   final TextEditingController _chatMessageController = TextEditingController();
   final FocusNode _chatFocusNode = FocusNode();
-  
+
   bool _isFullScreen = false;
   bool _showChatOverlay = true;
   bool _isVideoReady = false;
   List<ChatMessage> _chatMessages = [];
   int _viewerCount = 0;
-  
+
   @override
   void initState() {
     super.initState();
@@ -52,21 +49,26 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
     // For demo purposes, use a sample video URL or asset
     // In production, this would be the actual stream URL
     _videoController = VideoPlayerController.networkUrl(
-      Uri.parse('https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'),
+      Uri.parse(
+        'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      ),
     );
-    
-    _videoController!.initialize().then((_) {
-      setState(() {
-        _isVideoReady = true;
-      });
-      _videoController!.play();
-      _videoController!.setLooping(true);
-    }).catchError((error) {
-      // Handle video loading error - show placeholder
-      setState(() {
-        _isVideoReady = false;
-      });
-    });
+
+    _videoController!
+        .initialize()
+        .then((_) {
+          setState(() {
+            _isVideoReady = true;
+          });
+          _videoController!.play();
+          _videoController!.setLooping(true);
+        })
+        .catchError((error) {
+          // Handle video loading error - show placeholder
+          setState(() {
+            _isVideoReady = false;
+          });
+        });
   }
 
   void _loadChatMessages() {
@@ -103,7 +105,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
     setState(() {
       _viewerCount = 2547 + (DateTime.now().millisecond % 100);
     });
-    
+
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) _simulateViewerCount();
     });
@@ -120,20 +122,23 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
       'Incredible technique',
       'Best stream ever!',
     ];
-    
+
     Future.delayed(const Duration(seconds: 10), () {
       if (mounted) {
-        final randomMessage = messages[DateTime.now().millisecond % messages.length];
+        final randomMessage =
+            messages[DateTime.now().millisecond % messages.length];
         final randomUser = 'Viewer${DateTime.now().millisecond % 1000}';
-        
-        _addNewMessage(ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: 'random',
-          username: randomUser,
-          message: randomMessage,
-          timestamp: DateTime.now(),
-        ));
-        
+
+        _addNewMessage(
+          ChatMessage(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: 'random',
+            username: randomUser,
+            message: randomMessage,
+            timestamp: DateTime.now(),
+          ),
+        );
+
         _listenForNewMessages();
       }
     });
@@ -146,7 +151,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
         _chatMessages.removeAt(0); // Keep only last 100 messages
       }
     });
-    
+
     // Auto-scroll to bottom
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_chatScrollController.hasClients) {
@@ -168,13 +173,13 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
           children: [
             // Video Player
             _buildVideoPlayer(),
-            
+
             // Top overlay with stream info
             if (!_isFullScreen) _buildTopOverlay(),
-            
+
             // Chat overlay
             if (_showChatOverlay && !_isFullScreen) _buildChatOverlay(),
-            
+
             // Controls overlay
             _buildControlsOverlay(),
           ],
@@ -199,11 +204,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
                 gradient: AppTheme.primaryGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.live_tv,
-                color: Colors.white,
-                size: 60,
-              ),
+              child: const Icon(Icons.live_tv, color: Colors.white, size: 60),
             ),
             const SizedBox(height: 20),
             Text(
@@ -218,10 +219,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
             const SizedBox(height: 10),
             Text(
               widget.stream.description,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ],
@@ -250,10 +248,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.7),
-              Colors.transparent,
-            ],
+            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
           ),
         ),
         child: Column(
@@ -296,7 +291,10 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorColor,
                     borderRadius: BorderRadius.circular(12),
@@ -319,17 +317,17 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'Sales Challenge Final',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
               ],
@@ -404,12 +402,16 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
                   ),
                   GestureDetector(
                     onTap: () => setState(() => _showChatOverlay = false),
-                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ],
               ),
             ),
-            
+
             // Messages list
             Expanded(
               child: ListView.builder(
@@ -421,7 +423,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
                 },
               ),
             ),
-            
+
             // Message input
             _buildMessageInput(),
           ],
@@ -431,8 +433,9 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
   }
 
   Widget _buildChatMessage(ChatMessage message) {
-    final isOwnMessage = message.userId == 'current_user'; // Replace with actual user ID
-    
+    final isOwnMessage =
+        message.userId == 'current_user'; // Replace with actual user ID
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -449,10 +452,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
           const SizedBox(height: 2),
           Text(
             message.message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
         ],
       ),
@@ -504,11 +504,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
                 color: AppTheme.primaryColor,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.send,
-                color: Colors.white,
-                size: 18,
-              ),
+              child: const Icon(Icons.send, color: Colors.white, size: 18),
             ),
           ),
         ],
@@ -527,10 +523,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
-            colors: [
-              Colors.black.withOpacity(0.7),
-              Colors.transparent,
-            ],
+            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
           ),
         ),
         child: Row(
@@ -560,18 +553,18 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
 
   void _sendMessage(String text) {
     if (text.trim().isEmpty) return;
-    
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return;
-    
+
+    final authState = context.read<AuthCubit>().state;
+    if (authState == AuthStatus.error) return;
+
     final message = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       userId: 'current_user', // Replace with actual user ID
-      username: authState.user.displayName ?? 'You',
+      username: authState.user?.providerData[0].displayName ?? 'You',
       message: text.trim(),
       timestamp: DateTime.now(),
     );
-    
+
     _addNewMessage(message);
     _chatMessageController.clear();
   }
@@ -580,7 +573,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
     setState(() {
       _isFullScreen = !_isFullScreen;
     });
-    
+
     if (_isFullScreen) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       SystemChrome.setPreferredOrientations([
@@ -589,9 +582,7 @@ class _StreamViewerScreenState extends State<StreamViewerScreen> {
       ]);
     } else {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     }
   }
 
