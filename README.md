@@ -2,6 +2,8 @@
 
 A Flutter mobile application that gamifies sales team performance through a unique no-loss betting system. Users can place bets on sales events and teams without ever losing their credits, creating an engaging and risk-free experience.
 
+Demo loom - https://www.loom.com/share/0510415ec088417ca5e3b4d3f717c34e?sid=38afcb2c-4203-4db1-9b23-75be39cb2786
+
 ## 📱 Features
 
 ### 🎮 Core Betting System
