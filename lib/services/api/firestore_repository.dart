@@ -498,34 +498,38 @@ class FirestoreRepository {
       }
 
       debugPrint('Getting bets by IDs: $betIds');
-      
+
       // Firestore 'in' queries are limited to 10 items, so we need to batch them
       final bets = <BetModel>[];
-      
+
       // Process in chunks of 10
       for (int i = 0; i < betIds.length; i += 10) {
         final chunk = betIds.skip(i).take(10).toList();
         debugPrint('Processing chunk: $chunk');
-        
-        final query = await FirebaseService.betsCollection
-            .where(FieldPath.documentId, whereIn: chunk)
-            .get();
+
+        final query =
+            await FirebaseService.betsCollection
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
 
         debugPrint('Found ${query.docs.length} bet documents in chunk');
 
-        final chunkBets = query.docs
-            .map((doc) {
-              final data = doc.data();
-              if (data == null) return null;
-              debugPrint('Processing bet document ${doc.id}: ${data.toString()}');
-              return BetModel.fromJson({
-                ..._convertFirestoreData(data as Map<String, dynamic>),
-                'id': doc.id,
-              });
-            })
-            .whereType<BetModel>()
-            .toList();
-            
+        final chunkBets =
+            query.docs
+                .map((doc) {
+                  final data = doc.data();
+                  if (data == null) return null;
+                  debugPrint(
+                    'Processing bet document ${doc.id}: ${data.toString()}',
+                  );
+                  return BetModel.fromJson({
+                    ..._convertFirestoreData(data as Map<String, dynamic>),
+                    'id': doc.id,
+                  });
+                })
+                .whereType<BetModel>()
+                .toList();
+
         bets.addAll(chunkBets);
       }
 
@@ -540,7 +544,7 @@ class FirestoreRepository {
         if (bTime == null) return -1;
         return bTime.compareTo(aTime);
       });
-      
+
       return bets;
     } catch (e) {
       debugPrint('Error getting user bets by IDs: $e');
@@ -552,80 +556,37 @@ class FirestoreRepository {
   Future<BetModel?> getUserBetForEvent(String userId, String eventId) async {
     try {
       debugPrint('🔍 Checking bet for user $userId on event $eventId');
-      
+
       // First, get the user to check their betIds array
       final userData = await getUser(userId);
       if (userData == null || userData.betIds.isEmpty) {
         debugPrint('🔍 User has no bet IDs or user not found');
         return null;
       }
-      
-      debugPrint('🔍 User has ${userData.betIds.length} bet IDs: ${userData.betIds}');
-      
+
+      debugPrint(
+        '🔍 User has ${userData.betIds.length} bet IDs: ${userData.betIds}',
+      );
+
       // Load all user's bets using their betIds
       final userBets = await getUserBetsByIds(userData.betIds);
-      
+
       // Find bet for this specific event
       final bet = userBets.cast<BetModel?>().firstWhere(
         (bet) => bet?.eventId == eventId,
         orElse: () => null,
       );
-      
+
       if (bet != null) {
         debugPrint('✅ Found bet ${bet.id} for event $eventId');
       } else {
         debugPrint('❌ No bet found for event $eventId');
       }
-      
+
       return bet;
     } catch (e) {
       debugPrint('Error checking user bet for event: $e');
       return null;
-    }
-  }
-
-  Future<void> resolveBet(
-    String betId,
-    BetStatus status,
-    int creditsWon,
-  ) async {
-    try {
-      await FirebaseService.betsCollection.doc(betId).update({
-        'status': status.name,
-        'creditsWon': creditsWon,
-        'resolvedAt': DateTime.now().toIso8601String(),
-      });
-
-      // If bet won, update user's credits and stats
-      if (status == BetStatus.won && creditsWon > 0) {
-        final bet = await FirebaseService.betsCollection.doc(betId).get();
-        final betData = bet.data() as Map<String, dynamic>;
-        final userId = betData['userId'] as String;
-        final creditsStaked = betData['creditsStaked'] as int;
-
-        // Calculate net winnings (profit only, not including original stake)
-        final netWinnings = creditsWon - creditsStaked;
-
-        await FirebaseService.usersCollection.doc(userId).update({
-          'credits': FieldValue.increment(netWinnings), // Only add profit
-          'totalWins': FieldValue.increment(1),
-          'totalEarnings': FieldValue.increment(
-            netWinnings,
-          ), // Only count profit as earnings
-        });
-      } else if (status == BetStatus.lost) {
-        // Update loss count but don't deduct credits (no-loss mechanic)
-        final bet = await FirebaseService.betsCollection.doc(betId).get();
-        final betData = bet.data() as Map<String, dynamic>;
-        final userId = betData['userId'] as String;
-
-        await FirebaseService.usersCollection.doc(userId).update({
-          'totalLosses': FieldValue.increment(1),
-        });
-      }
-    } catch (e) {
-      debugPrint('Error resolving bet: $e');
-      rethrow;
     }
   }
 
@@ -669,15 +630,7 @@ class FirestoreRepository {
 
         // Prepare user updates
         final userId = bet.userId;
-        if (!userUpdates.containsKey(userId)) {
-          userUpdates[userId] = {
-            'totalWins': 0,
-            'totalLosses': 0,
-            'totalEarnings': 0,
-            'credits': 0,
-          };
-        }
-
+        userUpdates.putIfAbsent(userId, () => {});
         if (isWinner) {
           userUpdates[userId]!['totalWins'] = FieldValue.increment(1);
           // Calculate net winnings (profit only, not including original stake)

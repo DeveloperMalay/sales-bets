@@ -10,7 +10,6 @@ import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
 import '../../models/bet/bet_model.dart';
 import 'cubit/betting_cubit.dart';
-import '../../widgets/animations/win_celebration.dart';
 
 class BettingScreen extends StatefulWidget {
   final EventModel event;
@@ -21,29 +20,27 @@ class BettingScreen extends StatefulWidget {
   State<BettingScreen> createState() => _BettingScreenState();
 }
 
-class _BettingScreenState extends State<BettingScreen> with TickerProviderStateMixin {
+class _BettingScreenState extends State<BettingScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _customAmountController = TextEditingController();
   late ConfettiController _confettiController;
   late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animation controllers
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
-    );
-    
     // Refresh auth state to ensure we have current user
     context.read<AuthCubit>().refreshAuthState();
-    
+
     final authState = context.read<AuthCubit>().state;
     final userId = authState.user?.uid ?? '';
     debugPrint('🎯 Loading betting data for event: ${widget.event.id}');
@@ -72,13 +69,15 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
         listener: (context, state) {
           if (state.status == BettingStatus.betPlaced) {
             _showBetPlacedDialog(context);
-          } else if (state.status == BettingStatus.betWon && state.creditsWon != null) {
+          } else if (state.status == BettingStatus.betWon &&
+              state.creditsWon != null) {
             _triggerWinAnimation(state.creditsWon!);
             context.read<BettingCubit>().clearWinCelebration();
           } else if (state.status == BettingStatus.betLost) {
             _triggerLoseAnimation();
             context.read<BettingCubit>().clearWinCelebration();
-          } else if (state.status == BettingStatus.error && state.errorMessage != null) {
+          } else if (state.status == BettingStatus.error &&
+              state.errorMessage != null) {
             _showErrorDialog(context, state.errorMessage!);
           }
         },
@@ -122,7 +121,7 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
                   ],
                 ),
               ),
-              
+
               // Confetti overlay
               Positioned.fill(
                 child: Align(
@@ -334,9 +333,7 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppConstants.mediumSpacing),
-        ...state.teams.map(
-          (team) => _buildTeamOption(team, state),
-        ),
+        ...state.teams.map((team) => _buildTeamOption(team, state)),
       ],
     );
   }
@@ -351,86 +348,88 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
       duration: const Duration(milliseconds: 200),
       child: GestureDetector(
         onTap: () => context.read<BettingCubit>().selectTeam(team.id),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
-        padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-        decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? AppTheme.primaryColor.withOpacity(0.1)
-                  : Colors.white,
-          borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
-          border: Border.all(
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
+          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+          decoration: BoxDecoration(
             color:
                 isSelected
-                    ? AppTheme.primaryColor
-                    : Colors.grey.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
+                    ? AppTheme.primaryColor.withOpacity(0.1)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
+            border: Border.all(
+              color:
+                  isSelected
+                      ? AppTheme.primaryColor
+                      : Colors.grey.withOpacity(0.3),
+              width: isSelected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
-              ),
-              child: const Icon(Icons.group, color: Colors.white),
-            ),
-            const SizedBox(width: AppConstants.mediumSpacing),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    team.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    '${team.wins} wins • ${team.followers} followers',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.secondaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${odds.toStringAsFixed(1)}x',
-                    style: const TextStyle(
-                      color: AppTheme.secondaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.mediumRadius,
                   ),
                 ),
-                const SizedBox(height: 4),
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle,
-                    color: AppTheme.primaryColor,
-                    size: 24,
+                child: const Icon(Icons.group, color: Colors.white),
+              ),
+              const SizedBox(width: AppConstants.mediumSpacing),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${team.wins} wins • ${team.followers} followers',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.secondaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${odds.toStringAsFixed(1)}x',
+                      style: const TextStyle(
+                        color: AppTheme.secondaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-              ],
-            ),
-          ],
+                  const SizedBox(height: 4),
+                  if (isSelected)
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -458,34 +457,39 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
                     scale: isSelected ? 1.1 : 1.0,
                     duration: const Duration(milliseconds: 200),
                     child: GestureDetector(
-                      onTap: () => context.read<BettingCubit>().updateStakeAmount(amount),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? AppTheme.primaryColor
-                                : Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+                      onTap:
+                          () => context.read<BettingCubit>().updateStakeAmount(
+                            amount,
+                          ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
                           color:
                               isSelected
                                   ? AppTheme.primaryColor
-                                  : Colors.grey.withOpacity(0.3),
+                                  : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color:
+                                isSelected
+                                    ? AppTheme.primaryColor
+                                    : Colors.grey.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          '$amount',
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        '$amount',
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
                     ),
                   );
                 }).toList(),
@@ -581,9 +585,15 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
 
     // Debug information
     debugPrint('🔍 Button state check:');
-    debugPrint('  - existingBet: ${state.existingBet == null ? "null (good)" : "exists (blocking)"}');
-    debugPrint('  - selectedTeamId: ${state.selectedTeamId ?? "null (blocking)"}');
-    debugPrint('  - creditsToStake: ${state.creditsToStake} (min: ${AppConstants.minBetAmount}, max: ${AppConstants.maxBetAmount})');
+    debugPrint(
+      '  - existingBet: ${state.existingBet == null ? "null (good)" : "exists (blocking)"}',
+    );
+    debugPrint(
+      '  - selectedTeamId: ${state.selectedTeamId ?? "null (blocking)"}',
+    );
+    debugPrint(
+      '  - creditsToStake: ${state.creditsToStake} (min: ${AppConstants.minBetAmount}, max: ${AppConstants.maxBetAmount})',
+    );
     debugPrint('  - canPlaceBet: $canPlaceBet');
     debugPrint('  - isLoading: $isLoading');
 
@@ -620,15 +630,15 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
     debugPrint('🎯 Selected team: ${state.selectedTeamId}');
     debugPrint('🎯 Credits to stake: ${state.creditsToStake}');
     debugPrint('🎯 Event: ${state.event?.title}');
-    
+
     // Debug auth state
     context.read<AuthCubit>().debugAuthState();
-    
+
     final authState = context.read<AuthCubit>().state;
-    
+
     // Try getting user from Firebase Auth directly as fallback
     final firebaseUser = FirebaseAuth.instance.currentUser;
-    
+
     String? userId;
     if (authState.user != null) {
       userId = authState.user!.uid;
@@ -685,14 +695,6 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
     );
   }
 
-  void _showWinCelebration(BuildContext context, int creditsWon) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => WinCelebrationDialog(creditsWon: creditsWon),
-    );
-  }
-
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -713,7 +715,7 @@ class _BettingScreenState extends State<BettingScreen> with TickerProviderStateM
   void _triggerWinAnimation(int creditsWon) {
     // Start confetti
     _confettiController.play();
-    
+
     // Start scale animation
     _scaleController.forward().then((_) {
       _scaleController.reverse();

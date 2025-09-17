@@ -14,7 +14,8 @@ class RealTimeBetService {
 
   final FirestoreRepository _repository = FirestoreRepository();
   final AchievementService _achievementService = AchievementService();
-  final PushNotificationService _pushNotificationService = PushNotificationService();
+  final PushNotificationService _pushNotificationService =
+      PushNotificationService();
   StreamSubscription<List<BetModel>>? _betsSubscription;
   StreamSubscription<List<EventModel>>? _eventsSubscription;
   BuildContext? _context;
@@ -50,14 +51,16 @@ class RealTimeBetService {
     if (_currentUserId == null) return;
 
     // Listen to user's bets for real-time updates
-    _betsSubscription = _repository.getBetsStream(_currentUserId!).listen(
-      (bets) {
-        _handleBetUpdates(bets);
-      },
-      onError: (error) {
-        debugPrint('Error listening to bets: $error');
-      },
-    );
+    _betsSubscription = _repository
+        .getBetsStream(_currentUserId!)
+        .listen(
+          (bets) {
+            _handleBetUpdates(bets);
+          },
+          onError: (error) {
+            debugPrint('Error listening to bets: $error');
+          },
+        );
 
     // Listen to events for completion notifications
     _eventsSubscription = _repository.getEventsStream().listen(
@@ -81,7 +84,7 @@ class RealTimeBetService {
       );
 
       // If bet status changed from pending to resolved
-      if (previousBet.status == BetStatus.pending && 
+      if (previousBet.status == BetStatus.pending &&
           (bet.status == BetStatus.won || bet.status == BetStatus.lost)) {
         _showBetResolutionNotification(bet);
       }
@@ -95,7 +98,9 @@ class RealTimeBetService {
     for (final event in events) {
       if (event.status == EventStatus.completed && event.winnerId != null) {
         // Event just completed - bets will be resolved automatically
-        debugPrint('Event ${event.title} completed with winner: ${event.winnerId}');
+        debugPrint(
+          'Event ${event.title} completed with winner: ${event.winnerId}',
+        );
       }
     }
   }
@@ -128,7 +133,7 @@ class RealTimeBetService {
       // Check for new achievements
       final user = await _repository.getUser(_currentUserId!);
       final allUserBets = await _repository.getUserBets(_currentUserId!);
-      
+
       if (user != null) {
         final newAchievements = await _achievementService.checkAchievements(
           _currentUserId!,
@@ -148,25 +153,14 @@ class RealTimeBetService {
           );
         }
 
-        debugPrint('Checked achievements after bet resolution. Found ${newAchievements.length} new achievements.');
+        debugPrint(
+          'Checked achievements after bet resolution. Found ${newAchievements.length} new achievements.',
+        );
       }
     } catch (e) {
       // Fallback notification without details
-      NotificationService.showBetOutcomeNotification(
-        _context!,
-        bet,
-      );
+      NotificationService.showBetOutcomeNotification(_context!, bet);
       debugPrint('Error in bet resolution notification: $e');
-    }
-  }
-
-  // Manually trigger bet resolution for testing
-  Future<void> resolveBetForTesting(String betId, BetStatus status, int creditsWon) async {
-    try {
-      await _repository.resolveBet(betId, status, creditsWon);
-      debugPrint('Manually resolved bet $betId with status $status');
-    } catch (e) {
-      debugPrint('Error manually resolving bet: $e');
     }
   }
 
@@ -185,7 +179,7 @@ class RealTimeBetService {
     if (_currentUserId == null) {
       return Stream.value(0);
     }
-    
+
     return _repository.getBetsStream(_currentUserId!).map((bets) {
       return bets.where((bet) => bet.status == BetStatus.pending).length;
     });
@@ -200,13 +194,10 @@ class RealTimeBetService {
     return _repository.getBetsStream(_currentUserId!).map((bets) {
       final wins = bets.where((bet) => bet.status == BetStatus.won).length;
       final losses = bets.where((bet) => bet.status == BetStatus.lost).length;
-      final pending = bets.where((bet) => bet.status == BetStatus.pending).length;
-      
-      return {
-        'wins': wins,
-        'losses': losses,
-        'pending': pending,
-      };
+      final pending =
+          bets.where((bet) => bet.status == BetStatus.pending).length;
+
+      return {'wins': wins, 'losses': losses, 'pending': pending};
     });
   }
 
@@ -217,7 +208,7 @@ class RealTimeBetService {
     try {
       final user = await _repository.getUser(_currentUserId!);
       final allUserBets = await _repository.getUserBets(_currentUserId!);
-      
+
       if (user != null) {
         await _achievementService.checkAchievements(
           _currentUserId!,
