@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,8 +14,26 @@ import '../../screens/betting/betting_screen.dart';
 import '../../screens/stream/stream_viewer_screen.dart';
 import '../../screens/dev/dev_tools_screen.dart';
 import '../../screens/achievements/achievements_screen.dart';
+import '../../screens/bet_results/bet_results_screen.dart';
 import '../../models/event/event_model.dart';
 import '../../models/stream/stream_model.dart';
+
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -26,6 +45,7 @@ class AppRouter {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/auth',
     redirect: _redirect,
+    refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
     routes: [
       // Auth routes
       GoRoute(
@@ -99,23 +119,37 @@ class AppRouter {
         name: 'dev-tools',
         builder: (context, state) => const DevToolsScreen(),
       ),
+      GoRoute(
+        path: '/bet-results',
+        name: 'bet-results',
+        builder: (context, state) => const BetResultsScreen(),
+      ),
     ],
   );
 
   static String? _redirect(BuildContext context, GoRouterState state) {
     final user = FirebaseAuth.instance.currentUser;
     final isLoggedIn = user != null;
+    final currentRoute = state.matchedLocation;
+    
+    debugPrint('🚦 Router redirect check:');
+    debugPrint('  - Current route: $currentRoute');
+    debugPrint('  - User logged in: $isLoggedIn');
+    debugPrint('  - User ID: ${user?.uid ?? "none"}');
     
     // If user is not logged in and trying to access protected routes
-    if (!isLoggedIn && !_isPublicRoute(state.matchedLocation)) {
+    if (!isLoggedIn && !_isPublicRoute(currentRoute)) {
+      debugPrint('  - ✅ Redirecting to /auth (user not logged in)');
       return '/auth';
     }
     
     // If user is logged in and on auth routes, redirect to home
-    if (isLoggedIn && _isAuthRoute(state.matchedLocation)) {
+    if (isLoggedIn && _isAuthRoute(currentRoute)) {
+      debugPrint('  - ✅ Redirecting to /home (user logged in on auth route)');
       return '/home';
     }
     
+    debugPrint('  - ✅ No redirect needed');
     return null;
   }
 

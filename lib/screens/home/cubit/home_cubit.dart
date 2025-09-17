@@ -29,6 +29,7 @@ class HomeCubit extends Cubit<HomeState> {
       // Load user data
       int userCredits = 1000; // Default
       int todayEarnings = 0;
+      List<BetModel> userBets = [];
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -37,8 +38,14 @@ class HomeCubit extends Cubit<HomeState> {
           if (userData != null) {
             userCredits = userData.credits;
 
+            // Load user bets using the betIds from user data
+            if (userData.betIds.isNotEmpty) {
+              userBets = await _repository.getUserBetsByIds(userData.betIds);
+            } else {
+              userBets = [];
+            }
+            
             // Calculate today's earnings from bets resolved today
-            final userBets = await _repository.getUserBets(user.uid);
             todayEarnings = _calculateTodayEarnings(userBets);
           }
         } catch (e) {
@@ -52,10 +59,14 @@ class HomeCubit extends Cubit<HomeState> {
           status: HomeStatus.loaded,
           events: events,
           trendingTeams: trendingTeams,
+          userBets: userBets,
           userCredits: userCredits,
           todayEarnings: todayEarnings,
         ),
       );
+      
+      // Check for recently completed bets to show win/loss animations
+      await _checkForRecentBetResults(userBets);
     } catch (e) {
       emit(
         state.copyWith(
@@ -83,6 +94,63 @@ class HomeCubit extends Cubit<HomeState> {
     }
 
     return earnings;
+  }
+
+  // Check for recently completed bets to show win/loss animations
+  Future<void> _checkForRecentBetResults(List<BetModel> userBets) async {
+    try {
+      final now = DateTime.now();
+      final recentTimeThreshold = now.subtract(const Duration(minutes: 5)); // Check bets resolved in last 5 minutes
+      
+      for (final bet in userBets) {
+        if (bet.resolvedAt != null && 
+            bet.resolvedAt!.isAfter(recentTimeThreshold) &&
+            bet.status != BetStatus.pending) {
+          
+          debugPrint('🎯 Found recent bet result:');
+          debugPrint('  - Bet ID: ${bet.id}');
+          debugPrint('  - Status: ${bet.status}');
+          debugPrint('  - Resolved at: ${bet.resolvedAt}');
+          debugPrint('  - Credits won: ${bet.creditsWon}');
+          
+          // Wait a moment for UI to load
+          await Future.delayed(const Duration(milliseconds: 1000));
+          
+          if (bet.status == BetStatus.won) {
+            showWinAnimation(bet.creditsWon);
+          } else if (bet.status == BetStatus.lost) {
+            showLoseAnimation();
+          }
+          
+          // Only show animation for the most recent bet to avoid spam
+          break;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking recent bet results: $e');
+    }
+  }
+
+  void showWinAnimation(int creditsWon) {
+    debugPrint('🎉 Showing win animation on home screen: $creditsWon credits');
+    emit(state.copyWith(
+      status: HomeStatus.betWon,
+      creditsWon: creditsWon,
+    ));
+  }
+
+  void showLoseAnimation() {
+    debugPrint('😔 Showing lose animation on home screen');
+    emit(state.copyWith(
+      status: HomeStatus.betLost,
+    ));
+  }
+
+  void clearAnimation() {
+    emit(state.copyWith(
+      status: HomeStatus.loaded,
+      creditsWon: null,
+    ));
   }
 
   Future<void> getTeamsForEvent(EventModel event) async {

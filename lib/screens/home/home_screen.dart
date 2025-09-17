@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:confetti/confetti.dart';
+import 'package:sales_bets/models/bet/bet_model.dart';
 import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
@@ -17,21 +19,53 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late ConfettiController _confettiController;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
+    
+    // Initialize animation controllers
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
+    
     context.read<HomeCubit>().loadHomeData();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _scaleController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<HomeCubit, HomeState>(
-      listener: (context, state) {},
+      listener: (context, state) {
+        if (state.status == HomeStatus.betWon && state.creditsWon != null) {
+          _triggerWinAnimation(state.creditsWon!);
+          context.read<HomeCubit>().clearAnimation();
+        } else if (state.status == HomeStatus.betLost) {
+          _triggerLoseAnimation();
+          context.read<HomeCubit>().clearAnimation();
+        }
+      },
       builder: (context, state) {
         return Scaffold(
           body: SafeArea(
-            child:
+            child: Stack(
+              children: [
+                // Main content
                 state.status == HomeStatus.loading
                     ? const Center(child: CircularProgressIndicator())
                     : RefreshIndicator(
@@ -75,6 +109,32 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                
+                // Confetti overlay
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConfettiWidget(
+                      confettiController: _confettiController,
+                      blastDirection: 1.57, // radians (90 degrees - downward)
+                      particleDrag: 0.05,
+                      emissionFrequency: 0.05,
+                      numberOfParticles: 50,
+                      gravity: 0.1,
+                      shouldLoop: false,
+                      colors: const [
+                        Colors.green,
+                        Colors.blue,
+                        Colors.pink,
+                        Colors.orange,
+                        Colors.purple,
+                        Colors.yellow,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -115,7 +175,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final todayEarnings = state.todayEarnings;
     final isPositive = todayEarnings >= 0;
 
-    return Container(
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
       decoration: BoxDecoration(
@@ -159,6 +224,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+          ),
+        );
+      },
     );
   }
 
@@ -192,6 +260,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final event = state.events[index];
 
+                  // Find if user has a bet on this event
+                  final userBet = state.userBets.cast<BetModel?>().firstWhere(
+                    (bet) => bet?.eventId == event.id,
+                    orElse: () => null,
+                  );
+                  
+                  // Debug logging
+                  debugPrint('🎯 Event ${event.id} (${event.title}):');
+                  debugPrint('  - Total user bets: ${state.userBets.length}');
+                  debugPrint('  - User bet for this event: ${userBet?.id ?? "null"}');
+                  if (userBet != null) {
+                    debugPrint('  - Bet status: ${userBet.status}');
+                    debugPrint('  - Bet team: ${userBet.teamId}');
+                  }
+
                   return Padding(
                     padding: const EdgeInsets.only(
                       right: AppConstants.mediumSpacing,
@@ -201,6 +284,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: event.title,
                       teams: event.teamIds,
                       isLive: event.status == EventStatus.live,
+                      userBet: userBet,
+                      eventStatus: event.status.name,
+                      eventWinnerId: event.winnerId,
                       onTap: () async {
                         if (mounted) {
                           context.pushNamed('betting', extra: event);
@@ -237,6 +323,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
+    );
+  }
+
+  void _triggerWinAnimation(int creditsWon) {
+    // Start confetti
+    _confettiController.play();
+    
+    // Start scale animation for wallet card
+    _scaleController.forward().then((_) {
+      _scaleController.reverse();
+    });
+
+    // Show snackbar with win details
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.celebration, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '🎉 You won $creditsWon credits! Congratulations! 🎉',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _triggerLoseAnimation() {
+    // Show encouraging message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.sentiment_satisfied, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '💪 Better luck next time! Remember, your credits never decrease.',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
     );
   }
 }

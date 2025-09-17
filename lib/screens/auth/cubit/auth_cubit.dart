@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sales_bets/models/user/user_model.dart';
 import 'package:sales_bets/services/api/firebase_service.dart';
@@ -8,17 +10,70 @@ part 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   final FirebaseAuth _auth = FirebaseService.auth;
+  StreamSubscription<User?>? _authStateSubscription;
 
-  AuthCubit() : super(AuthState.initial());
+  AuthCubit() : super(AuthState.initial()) {
+    // Listen to auth state changes
+    _initializeAuthListener();
+  }
+
+  @override
+  Future<void> close() {
+    _authStateSubscription?.cancel();
+    return super.close();
+  }
+
+  void _initializeAuthListener() {
+    // Listen to auth state changes
+    _authStateSubscription = _auth.authStateChanges().listen((User? user) {
+      debugPrint('🔍 Auth state changed: ${user?.uid ?? "null"} (${user?.email ?? "no email"})');
+      if (user != null) {
+        emit(state.copyWith(status: AuthStatus.loaded, user: user));
+      } else {
+        emit(AuthState.initial());
+      }
+    });
+    
+    // Also check current state immediately
+    final currentUser = _auth.currentUser;
+    debugPrint('🔍 Current user on init: ${currentUser?.uid ?? "null"} (${currentUser?.email ?? "no email"})');
+    if (currentUser != null) {
+      emit(state.copyWith(status: AuthStatus.loaded, user: currentUser));
+    }
+  }
+
+  void refreshAuthState() {
+    final currentUser = _auth.currentUser;
+    debugPrint('🔍 Manual refresh - current user: ${currentUser?.uid ?? "null"} (${currentUser?.email ?? "no email"})');
+    if (currentUser != null) {
+      emit(state.copyWith(status: AuthStatus.loaded, user: currentUser));
+    } else {
+      emit(AuthState.initial());
+    }
+  }
+
+  void debugAuthState() {
+    debugPrint('🔍 Current AuthCubit state:');
+    debugPrint('  - Status: ${state.status}');
+    debugPrint('  - User: ${state.user?.uid ?? "null"} (${state.user?.email ?? "no email"})');
+    debugPrint('  - Error: ${state.errorMessage ?? "none"}');
+    debugPrint('🔍 Firebase Auth current user:');
+    final firebaseUser = _auth.currentUser;
+    debugPrint('  - UID: ${firebaseUser?.uid ?? "null"}');
+    debugPrint('  - Email: ${firebaseUser?.email ?? "no email"}');
+    debugPrint('  - Is Anonymous: ${firebaseUser?.isAnonymous ?? "unknown"}');
+  }
 
   Future<void> signInAnonymously() async {
     try {
+      debugPrint('🔑 Starting anonymous sign in...');
       emit(state.copyWith(status: AuthStatus.loading));
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInAnonymously();
+      UserCredential userCredential = await _auth.signInAnonymously();
       User? user = userCredential.user;
-      emit(state.copyWith(status: AuthStatus.loaded, user: user));
+      debugPrint('✅ Anonymous sign in successful: ${user?.uid}');
+      // Note: The auth state listener will handle the state update
     } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Anonymous sign in failed: ${e.message}');
       emit(state.copyWith(status: AuthStatus.error, errorMessage: e.message));
     }
   }
@@ -41,8 +96,9 @@ class AuthCubit extends Cubit<AuthState> {
 
         // Create user document in Firestore
         await _createUserDocument(credential.user!, fullName);
-
-        emit(state.copyWith(status: AuthStatus.loaded, user: credential.user));
+        
+        debugPrint('✅ Sign up successful: ${credential.user!.uid}');
+        // Note: The auth state listener will handle the state update
       }
     } on FirebaseAuthException catch (e) {
       emit(
@@ -70,7 +126,8 @@ class AuthCubit extends Cubit<AuthState> {
       );
 
       if (credential.user != null) {
-        emit(state.copyWith(status: AuthStatus.loaded, user: credential.user));
+        debugPrint('✅ Email sign in successful: ${credential.user!.uid}');
+        // Note: The auth state listener will handle the state update
       }
     } on FirebaseAuthException catch (e) {
       emit(

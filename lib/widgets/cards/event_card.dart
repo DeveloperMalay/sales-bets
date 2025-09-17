@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
+import '../../models/bet/bet_model.dart';
+
+enum EventCardBetStatus { noBet, pending, won, lost }
 
 class EventCard extends StatelessWidget {
   const EventCard({
@@ -8,13 +11,60 @@ class EventCard extends StatelessWidget {
     required this.title,
     required this.teams,
     this.isLive = false,
+    this.userBet,
+    this.eventStatus,
+    this.eventWinnerId,
     this.onTap,
   });
 
   final String title;
   final List<String> teams;
   final bool isLive;
+  final BetModel? userBet;
+  final String? eventStatus;
+  final String? eventWinnerId;
   final VoidCallback? onTap;
+
+  EventCardBetStatus get _betStatus {
+    if (userBet == null) return EventCardBetStatus.noBet;
+    
+    // Check if event is completed
+    if (eventStatus == 'completed') {
+      if (userBet!.teamId == eventWinnerId) {
+        return EventCardBetStatus.won;
+      } else {
+        return EventCardBetStatus.lost;
+      }
+    }
+    
+    return EventCardBetStatus.pending;
+  }
+
+  String get _betStatusText {
+    switch (_betStatus) {
+      case EventCardBetStatus.noBet:
+        return 'Bet Now';
+      case EventCardBetStatus.pending:
+        return 'Betting';
+      case EventCardBetStatus.won:
+        return 'Won!';
+      case EventCardBetStatus.lost:
+        return 'Lost';
+    }
+  }
+
+  Color get _betStatusColor {
+    switch (_betStatus) {
+      case EventCardBetStatus.noBet:
+        return AppTheme.primaryColor;
+      case EventCardBetStatus.pending:
+        return Colors.orange;
+      case EventCardBetStatus.won:
+        return Colors.green;
+      case EventCardBetStatus.lost:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +172,13 @@ class EventCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: _betStatusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
-                          'Bet Now',
+                        child: Text(
+                          _betStatusText,
                           style: TextStyle(
-                            color: AppTheme.primaryColor,
+                            color: _betStatusColor,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),

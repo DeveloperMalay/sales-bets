@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:confetti/confetti.dart';
 import 'package:sales_bets/screens/auth/cubit/auth_cubit.dart';
-import 'package:sales_bets/screens/home/cubit/home_cubit.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/themes/app_theme.dart';
 import '../../models/event/event_model.dart';
 import '../../models/team/team_model.dart';
 import '../../models/bet/bet_model.dart';
-import 'cubit/betting_bloc.dart';
+import 'cubit/betting_cubit.dart';
 import '../../widgets/animations/win_celebration.dart';
-import '../../services/api/firestore_repository.dart';
 
 class BettingScreen extends StatefulWidget {
   final EventModel event;
@@ -21,49 +21,42 @@ class BettingScreen extends StatefulWidget {
   State<BettingScreen> createState() => _BettingScreenState();
 }
 
-class _BettingScreenState extends State<BettingScreen> {
-  String? selectedTeamId;
-  int creditsToStake = 50;
+class _BettingScreenState extends State<BettingScreen> with TickerProviderStateMixin {
   final TextEditingController _customAmountController = TextEditingController();
-  final FirestoreRepository _repository = FirestoreRepository();
-  BetModel? existingBet;
-  bool isLoadingExistingBet = true;
+  late ConfettiController _confettiController;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    context.read<HomeCubit>().getTeamsForEvent(widget.event);
-    _checkExistingBet();
-  }
-
-  Future<void> _checkExistingBet() async {
+    
+    // Initialize animation controllers
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
+    
+    // Refresh auth state to ensure we have current user
+    context.read<AuthCubit>().refreshAuthState();
+    
     final authState = context.read<AuthCubit>().state;
-    if (authState.user != null) {
-      try {
-        final bet = await _repository.getUserBetForEvent(
-          authState.user?.uid ?? '',
-          widget.event.id,
-        );
-        if (mounted) {
-          setState(() {
-            existingBet = bet;
-            isLoadingExistingBet = false;
-          });
-        }
-      } catch (e) {
-        debugPrint('Error checking existing bet: $e');
-        if (mounted) {
-          setState(() {
-            isLoadingExistingBet = false;
-          });
-        }
-      }
-    }
+    final userId = authState.user?.uid ?? '';
+    debugPrint('🎯 Loading betting data for event: ${widget.event.id}');
+    debugPrint('🎯 Event status on load: ${widget.event.status}');
+    debugPrint('🎯 Event winner: ${widget.event.winnerId}');
+    context.read<BettingCubit>().loadBettingData(widget.event.id, userId);
   }
 
   @override
   void dispose() {
     _customAmountController.dispose();
+    _confettiController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
@@ -75,56 +68,93 @@ class _BettingScreenState extends State<BettingScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: BlocListener<BettingBloc, BettingState>(
+      body: BlocConsumer<BettingCubit, BettingState>(
         listener: (context, state) {
-          if (state is BetPlaced) {
+          if (state.status == BettingStatus.betPlaced) {
             _showBetPlacedDialog(context);
-          } else if (state is BetWon) {
-            _showWinCelebration(context, state.creditsWon);
-          } else if (state is BettingError) {
-            _showErrorDialog(context, state.message);
+          } else if (state.status == BettingStatus.betWon && state.creditsWon != null) {
+            _triggerWinAnimation(state.creditsWon!);
+            context.read<BettingCubit>().clearWinCelebration();
+          } else if (state.status == BettingStatus.betLost) {
+            _triggerLoseAnimation();
+            context.read<BettingCubit>().clearWinCelebration();
+          } else if (state.status == BettingStatus.error && state.errorMessage != null) {
+            _showErrorDialog(context, state.errorMessage!);
           }
         },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, state) {
+          if (state.status == BettingStatus.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return Stack(
             children: [
-              FadeInDown(child: _buildEventCard()),
-              const SizedBox(height: AppConstants.largeSpacing),
-              if (isLoadingExistingBet)
-                const Center(child: CircularProgressIndicator())
-              else if (existingBet != null)
-                FadeInLeft(child: _buildExistingBetCard())
-              else
-                FadeInLeft(child: _buildNoLossExplanation()),
-              const SizedBox(height: AppConstants.largeSpacing),
-              if (existingBet == null) ...[
-                FadeInUp(child: _buildTeamSelection()),
-                const SizedBox(height: AppConstants.largeSpacing),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 200),
-                  child: _buildBetAmountSelection(),
+              // Main content
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FadeInDown(child: _buildEventCard(state)),
+                    const SizedBox(height: AppConstants.largeSpacing),
+                    if (state.existingBet != null)
+                      FadeInLeft(child: _buildExistingBetCard(state))
+                    else ...[
+                      FadeInLeft(child: _buildNoLossExplanation()),
+                      const SizedBox(height: AppConstants.largeSpacing),
+                      FadeInUp(child: _buildTeamSelection(state)),
+                      const SizedBox(height: AppConstants.largeSpacing),
+                      FadeInUp(
+                        delay: const Duration(milliseconds: 200),
+                        child: _buildBetAmountSelection(state),
+                      ),
+                      const SizedBox(height: AppConstants.largeSpacing),
+                      FadeInUp(
+                        delay: const Duration(milliseconds: 400),
+                        child: _buildPotentialWinnings(state),
+                      ),
+                    ],
+                    const SizedBox(height: AppConstants.extraLargeSpacing),
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 600),
+                      child: _buildPlaceBetButton(state),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppConstants.largeSpacing),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 400),
-                  child: _buildPotentialWinnings(),
+              ),
+              
+              // Confetti overlay
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confettiController,
+                    blastDirection: 1.57, // radians (90 degrees - downward)
+                    particleDrag: 0.05,
+                    emissionFrequency: 0.05,
+                    numberOfParticles: 50,
+                    gravity: 0.1,
+                    shouldLoop: false,
+                    colors: const [
+                      Colors.green,
+                      Colors.blue,
+                      Colors.pink,
+                      Colors.orange,
+                      Colors.purple,
+                      Colors.yellow,
+                    ],
+                  ),
                 ),
-              ],
-              const SizedBox(height: AppConstants.extraLargeSpacing),
-              FadeInUp(
-                delay: const Duration(milliseconds: 600),
-                child: _buildPlaceBetButton(),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildEventCard() {
+  Widget _buildEventCard(BettingState state) {
+    final event = state.event ?? widget.event;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -141,13 +171,13 @@ class _BettingScreenState extends State<BettingScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color:
-                      widget.event.status == EventStatus.live
+                      event.status == EventStatus.live
                           ? AppTheme.errorColor
                           : AppTheme.warningColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  widget.event.status == EventStatus.live ? 'LIVE' : 'UPCOMING',
+                  event.status == EventStatus.live ? 'LIVE' : 'UPCOMING',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -159,7 +189,7 @@ class _BettingScreenState extends State<BettingScreen> {
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
           Text(
-            widget.event.title,
+            event.title,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -168,7 +198,7 @@ class _BettingScreenState extends State<BettingScreen> {
           ),
           const SizedBox(height: AppConstants.smallSpacing),
           Text(
-            widget.event.description,
+            event.description,
             style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: AppConstants.mediumSpacing),
@@ -187,9 +217,10 @@ class _BettingScreenState extends State<BettingScreen> {
     );
   }
 
-  Widget _buildExistingBetCard() {
-    if (existingBet == null) return const SizedBox.shrink();
+  Widget _buildExistingBetCard(BettingState state) {
+    if (state.existingBet == null) return const SizedBox.shrink();
 
+    final existingBet = state.existingBet!;
     return Container(
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
       decoration: BoxDecoration(
@@ -226,12 +257,12 @@ class _BettingScreenState extends State<BettingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Staked: ${existingBet!.creditsStaked} credits • Status: ${existingBet!.status.toString().split('.').last.toUpperCase()}',
+                  'Staked: ${existingBet.creditsStaked} credits • Status: ${existingBet.status.toString().split('.').last.toUpperCase()}',
                   style: TextStyle(color: Colors.grey[700], fontSize: 14),
                 ),
-                if (existingBet!.status == BetStatus.won)
+                if (existingBet.status == BetStatus.won)
                   Text(
-                    'Winnings: +${existingBet!.creditsWon} credits',
+                    'Winnings: +${existingBet.creditsWon} credits',
                     style: const TextStyle(
                       color: AppTheme.successColor,
                       fontSize: 14,
@@ -294,38 +325,32 @@ class _BettingScreenState extends State<BettingScreen> {
     );
   }
 
-  Widget _buildTeamSelection() {
-    return BlocConsumer<HomeCubit, HomeState>(
-      listener: (context, state) {},
-      builder: (context, state) {
-        return state.status == HomeStatus.loading
-            ? const Center(child: CircularProgressIndicator())
-            : FadeIn(
-              delay: const Duration(milliseconds: 600),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Choose Your Team',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: AppConstants.mediumSpacing),
-                  ...state.eventSpecificTeams.map(
-                    (team) => _buildTeamOption(team),
-                  ),
-                ],
-              ),
-            );
-      },
+  Widget _buildTeamSelection(BettingState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Choose Your Team',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppConstants.mediumSpacing),
+        ...state.teams.map(
+          (team) => _buildTeamOption(team, state),
+        ),
+      ],
     );
   }
 
-  Widget _buildTeamOption(TeamModel team) {
-    final isSelected = selectedTeamId == team.id;
-    final odds = widget.event.odds[team.id] ?? 2.0;
+  Widget _buildTeamOption(TeamModel team, BettingState state) {
+    final isSelected = state.selectedTeamId == team.id;
+    final event = state.event ?? widget.event;
+    final odds = event.odds[team.id] ?? 2.0;
 
-    return GestureDetector(
-      onTap: () => setState(() => selectedTeamId = team.id),
+    return AnimatedScale(
+      scale: isSelected ? 1.02 : 1.0,
+      duration: const Duration(milliseconds: 200),
+      child: GestureDetector(
+        onTap: () => context.read<BettingCubit>().selectTeam(team.id),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
         padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -406,10 +431,11 @@ class _BettingScreenState extends State<BettingScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
-  Widget _buildBetAmountSelection() {
+  Widget _buildBetAmountSelection(BettingState state) {
     final presetAmounts = [25, 50, 100, 250, 500];
 
     return FadeInDown(
@@ -427,9 +453,12 @@ class _BettingScreenState extends State<BettingScreen> {
             runSpacing: AppConstants.smallSpacing,
             children:
                 presetAmounts.map((amount) {
-                  final isSelected = creditsToStake == amount;
-                  return GestureDetector(
-                    onTap: () => setState(() => creditsToStake = amount),
+                  final isSelected = state.creditsToStake == amount;
+                  return AnimatedScale(
+                    scale: isSelected ? 1.1 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: GestureDetector(
+                      onTap: () => context.read<BettingCubit>().updateStakeAmount(amount),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -457,6 +486,7 @@ class _BettingScreenState extends State<BettingScreen> {
                         ),
                       ),
                     ),
+                    ),
                   );
                 }).toList(),
           ),
@@ -476,7 +506,7 @@ class _BettingScreenState extends State<BettingScreen> {
             onChanged: (value) {
               final amount = int.tryParse(value);
               if (amount != null) {
-                setState(() => creditsToStake = amount);
+                context.read<BettingCubit>().updateStakeAmount(amount);
               }
             },
           ),
@@ -485,16 +515,17 @@ class _BettingScreenState extends State<BettingScreen> {
     );
   }
 
-  Widget _buildPotentialWinnings() {
-    if (selectedTeamId == null) {
+  Widget _buildPotentialWinnings(BettingState state) {
+    if (state.selectedTeamId == null) {
       return const SizedBox.shrink();
     }
-    final state = context.read<HomeCubit>().state;
-    final team = state.eventSpecificTeams.firstWhere(
-      (t) => t.id == selectedTeamId,
-    );
-    final odds = widget.event.odds[team.id] ?? 2.0;
-    final potentialWin = (creditsToStake * odds).round();
+
+    final bettingCubit = context.read<BettingCubit>();
+    final team = bettingCubit.getTeamById(state.selectedTeamId!);
+    if (team == null) return const SizedBox.shrink();
+
+    final potentialWin = bettingCubit.calculatePotentialWinnings();
+    final netProfit = bettingCubit.calculateNetProfit();
 
     return Container(
       padding: const EdgeInsets.all(AppConstants.mediumSpacing),
@@ -509,16 +540,20 @@ class _BettingScreenState extends State<BettingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Potential Winnings',
+                'Potential Profit (No-Loss)',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               Text(
-                '+$potentialWin Credits',
+                '+$netProfit Credits',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              Text(
+                'Stake: ${state.creditsToStake} → Total: $potentialWin',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
           ),
@@ -535,68 +570,84 @@ class _BettingScreenState extends State<BettingScreen> {
     );
   }
 
-  Widget _buildPlaceBetButton() {
+  Widget _buildPlaceBetButton(BettingState state) {
     final canPlaceBet =
-        existingBet == null && // Can't place bet if one already exists
-        selectedTeamId != null &&
-        creditsToStake >= AppConstants.minBetAmount &&
-        creditsToStake <= AppConstants.maxBetAmount;
+        state.existingBet == null && // Can't place bet if one already exists
+        state.selectedTeamId != null &&
+        state.creditsToStake >= AppConstants.minBetAmount &&
+        state.creditsToStake <= AppConstants.maxBetAmount;
 
-    return BlocBuilder<BettingBloc, BettingState>(
-      builder: (context, state) {
-        final isLoading = state is BettingLoading;
+    final isLoading = state.status == BettingStatus.placingBet;
 
-        return SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            onPressed: canPlaceBet && !isLoading ? _placeBet : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
-              ),
-            ),
-            child:
-                isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                      existingBet != null
-                          ? 'Bet Already Placed'
-                          : 'Place No-Loss Bet',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+    // Debug information
+    debugPrint('🔍 Button state check:');
+    debugPrint('  - existingBet: ${state.existingBet == null ? "null (good)" : "exists (blocking)"}');
+    debugPrint('  - selectedTeamId: ${state.selectedTeamId ?? "null (blocking)"}');
+    debugPrint('  - creditsToStake: ${state.creditsToStake} (min: ${AppConstants.minBetAmount}, max: ${AppConstants.maxBetAmount})');
+    debugPrint('  - canPlaceBet: $canPlaceBet');
+    debugPrint('  - isLoading: $isLoading');
+
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: canPlaceBet && !isLoading ? () => _placeBet(state) : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.mediumRadius),
           ),
-        );
-      },
+        ),
+        child:
+            isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(
+                  state.existingBet != null
+                      ? 'Bet Already Placed'
+                      : 'Place No-Loss Bet',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+      ),
     );
   }
 
-  void _placeBet() {
+  void _placeBet(BettingState state) {
+    debugPrint('🎯 Place bet button clicked!');
+    debugPrint('🎯 Selected team: ${state.selectedTeamId}');
+    debugPrint('🎯 Credits to stake: ${state.creditsToStake}');
+    debugPrint('🎯 Event: ${state.event?.title}');
+    
+    // Debug auth state
+    context.read<AuthCubit>().debugAuthState();
+    
     final authState = context.read<AuthCubit>().state;
-    if (authState.user == null) return;
-
-    if (selectedTeamId != null) {
-      final state = context.read<HomeCubit>().state;
-      final team = state.eventSpecificTeams.firstWhere(
-        (t) => t.id == selectedTeamId,
-      );
-      final odds = widget.event.odds[team.id] ?? 2.0;
-
-      context.read<BettingBloc>().add(
-        PlaceBetRequested(
-          userId: authState.user?.uid ?? '',
-          eventId: widget.event.id,
-          teamId: selectedTeamId!,
-          creditsStaked: creditsToStake,
-          odds: odds,
+    
+    // Try getting user from Firebase Auth directly as fallback
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    
+    String? userId;
+    if (authState.user != null) {
+      userId = authState.user!.uid;
+      debugPrint('✅ Using AuthCubit user: $userId');
+    } else if (firebaseUser != null) {
+      userId = firebaseUser.uid;
+      debugPrint('✅ Using Firebase Auth user: $userId');
+    } else {
+      debugPrint('❌ No authenticated user found in either source');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to place a bet'),
+          backgroundColor: Colors.red,
         ),
       );
+      return;
     }
+
+    context.read<BettingCubit>().placeBet(userId);
   }
 
   void _showBetPlacedDialog(BuildContext context) {
@@ -656,6 +707,58 @@ class _BettingScreenState extends State<BettingScreen> {
               ),
             ],
           ),
+    );
+  }
+
+  void _triggerWinAnimation(int creditsWon) {
+    // Start confetti
+    _confettiController.play();
+    
+    // Start scale animation
+    _scaleController.forward().then((_) {
+      _scaleController.reverse();
+    });
+
+    // Show snackbar with win details
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.celebration, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '🎉 You won $creditsWon credits! Congratulations! 🎉',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _triggerLoseAnimation() {
+    // Show encouraging message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.sentiment_satisfied, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '💪 Better luck next time! Remember, your credits never decrease.',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
     );
   }
 

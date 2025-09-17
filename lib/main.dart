@@ -12,7 +12,7 @@ import 'core/constants/app_constants.dart';
 import 'core/routing/app_router.dart';
 import 'cubits/theme/theme_cubit.dart';
 import 'cubits/navigation/navigation_cubit.dart';
-import 'screens/betting/cubit/betting_bloc.dart';
+import 'screens/betting/cubit/betting_cubit.dart';
 import 'services/api/firestore_repository.dart';
 import 'services/push_notification_service.dart';
 import 'firebase_options.dart';
@@ -49,10 +49,7 @@ class SalesBetsApp extends StatelessWidget {
           BlocProvider(create: (context) => NavigationCubit()),
           BlocProvider(create: (context) => AuthCubit()),
           BlocProvider(
-            create:
-                (context) => BettingBloc(
-                  repository: context.read<FirestoreRepository>(),
-                ),
+            create: (context) => BettingCubit(context.read<FirestoreRepository>()),
           ),
           BlocProvider(
             create: (context) => HomeCubit(context.read<FirestoreRepository>()),

@@ -1,58 +1,90 @@
-part of 'betting_bloc.dart';
+part of 'betting_cubit.dart';
 
-abstract class BettingState extends Equatable {
-  const BettingState();
-
-  @override
-  List<Object?> get props => [];
+enum BettingStatus { 
+  initial, 
+  loading, 
+  loaded, 
+  placingBet, 
+  betPlaced, 
+  betWon, 
+  betLost,
+  error 
 }
 
-class BettingInitial extends BettingState {}
+class BettingState extends Equatable {
+  final BettingStatus status;
+  final String? errorMessage;
+  final EventModel? event;
+  final List<TeamModel> teams;
+  final BetModel? existingBet;
+  final String? selectedTeamId;
+  final int creditsToStake;
+  final int userCredits;
+  final int? creditsWon;
 
-class BettingLoading extends BettingState {}
+  const BettingState({
+    required this.status,
+    required this.errorMessage,
+    required this.event,
+    required this.teams,
+    required this.existingBet,
+    required this.selectedTeamId,
+    required this.creditsToStake,
+    required this.userCredits,
+    this.creditsWon,
+  });
 
-class BetPlaced extends BettingState {
-  final BetModel bet;
-
-  const BetPlaced({required this.bet});
-
-  @override
-  List<Object> get props => [bet];
-}
-
-class BetWon extends BettingState {
-  final BetModel bet;
-  final int creditsWon;
-
-  const BetWon({required this.bet, required this.creditsWon});
-
-  @override
-  List<Object> get props => [bet, creditsWon];
-}
-
-class BetLost extends BettingState {
-  final BetModel bet;
-
-  const BetLost({required this.bet});
-
-  @override
-  List<Object> get props => [bet];
-}
-
-class UserBetsLoaded extends BettingState {
-  final List<BetModel> bets;
-
-  const UserBetsLoaded({required this.bets});
-
-  @override
-  List<Object> get props => [bets];
-}
-
-class BettingError extends BettingState {
-  final String message;
-
-  const BettingError({required this.message});
+  factory BettingState.initial() {
+    return const BettingState(
+      status: BettingStatus.initial,
+      errorMessage: null,
+      event: null,
+      teams: [],
+      existingBet: null,
+      selectedTeamId: null,
+      creditsToStake: 50,
+      userCredits: 1000,
+      creditsWon: null,
+    );
+  }
 
   @override
-  List<Object> get props => [message];
+  List<Object?> get props => [
+    status,
+    errorMessage,
+    event,
+    teams,
+    existingBet,
+    selectedTeamId,
+    creditsToStake,
+    userCredits,
+    creditsWon,
+  ];
+
+  BettingState copyWith({
+    BettingStatus? status,
+    String? errorMessage,
+    EventModel? event,
+    List<TeamModel>? teams,
+    BetModel? existingBet,
+    bool clearExistingBet = false,
+    String? selectedTeamId,
+    bool clearSelectedTeamId = false,
+    int? creditsToStake,
+    int? userCredits,
+    int? creditsWon,
+    bool clearCreditsWon = false,
+  }) {
+    return BettingState(
+      status: status ?? this.status,
+      errorMessage: errorMessage ?? this.errorMessage,
+      event: event ?? this.event,
+      teams: teams ?? this.teams,
+      existingBet: clearExistingBet ? null : (existingBet ?? this.existingBet),
+      selectedTeamId: clearSelectedTeamId ? null : (selectedTeamId ?? this.selectedTeamId),
+      creditsToStake: creditsToStake ?? this.creditsToStake,
+      userCredits: userCredits ?? this.userCredits,
+      creditsWon: clearCreditsWon ? null : (creditsWon ?? this.creditsWon),
+    );
+  }
 }

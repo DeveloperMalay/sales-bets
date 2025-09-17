@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/themes/app_theme.dart';
@@ -24,6 +23,7 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
   Map<String, int> _dataStats = {};
   List<EventModel> _availableEvents = [];
   List<TeamModel> _teams = [];
+  Map<String, String?> _selectedWinners = {}; // Map eventId -> selected teamId
 
   @override
   void initState() {
@@ -129,32 +129,47 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
     }
   }
 
-  Future<void> _endEventWithRandomWinner(EventModel event) async {
-    final eventTeams =
-        _teams.where((team) => event.teamIds.contains(team.id)).toList();
+  Future<void> _endEventWithSelectedWinner(EventModel event) async {
+    final selectedTeamId = _selectedWinners[event.id];
 
-    if (eventTeams.isEmpty) {
+    if (selectedTeamId == null) {
       setState(() {
-        _statusMessage = '❌ No teams found for this event';
+        _statusMessage = '❌ Please select a winner team first';
       });
       return;
     }
 
-    // Random winner algorithm
-    final random = Random();
-    final winnerTeam = eventTeams[random.nextInt(eventTeams.length)];
+    final winnerTeam = _teams.firstWhere(
+      (team) => team.id == selectedTeamId,
+      orElse:
+          () => TeamModel(
+            id: '',
+            name: 'Unknown',
+            followers: 0,
+            wins: 0,
+            isLive: false,
+            description: '',
+          ),
+    );
+
+    if (winnerTeam.id.isEmpty) {
+      setState(() {
+        _statusMessage = '❌ Selected team not found';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _statusMessage =
-          '🎲 Running random winner algorithm for "${event.title}"...';
+          '🏆 Setting "${winnerTeam.name}" as winner for "${event.title}"...';
     });
 
-    // Add a small delay to show the algorithm is "running"
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Add a small delay for better UX
+    await Future.delayed(const Duration(milliseconds: 1000));
 
     try {
-      // Complete the event directly via repository to ensure it works
+      // Complete the event with the selected winner
       await _repository.completeEvent(event.id, winnerTeam.id);
 
       // Give a short delay for the real-time listeners to catch the changes
@@ -164,10 +179,10 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
       setState(() {
         _statusMessage =
             '🎉 Event "${event.title}" completed!\n'
-            '🏆 Random Winner: ${winnerTeam.name}\n'
-            '📊 Algorithm picked ${winnerTeam.name} from ${eventTeams.length} teams\n'
+            '🏆 Winner: ${winnerTeam.name}\n'
             '✅ Check your notifications for bet results!';
         _isLoading = false;
+        _selectedWinners.remove(event.id); // Clear the selection
       });
     } catch (e) {
       setState(() {
@@ -175,6 +190,12 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _setWinnerForEvent(String eventId, String? teamId) {
+    setState(() {
+      _selectedWinners[eventId] = teamId;
+    });
   }
 
   @override
@@ -406,8 +427,9 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
             const SizedBox(height: 16),
             const Text(
               '1. Create a test bet on any event (optional - for testing)\n'
-              '2. Click "End Event" to randomly pick a winner\n'
-              '3. Watch for win/loss notifications and check your credits',
+              '2. Select a winning team from the dropdown\n'
+              '3. Click "End Event" to set the selected team as winner\n'
+              '4. Watch for win/loss notifications and check your credits',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -468,80 +490,118 @@ class _DevToolsScreenState extends State<DevToolsScreen> {
         borderRadius: BorderRadius.circular(12),
         color: isCompleted ? Colors.green.shade50 : Colors.grey.shade50,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isCompleted && winnerTeam != null
-                      ? 'Winner: ${winnerTeam.name} 🏆'
-                      : 'Teams: ${eventTeams.map((t) => t.name).join(', ')}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isCompleted ? Colors.green.shade700 : Colors.grey,
-                    fontWeight:
-                        isCompleted ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        isCompleted
-                            ? Colors.green.withOpacity(0.1)
-                            : event.status == EventStatus.live
-                            ? Colors.red.withOpacity(0.1)
-                            : Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    event.status.name.toUpperCase(),
-                    style: TextStyle(
-                      color:
-                          isCompleted
-                              ? Colors.green
-                              : event.status == EventStatus.live
-                              ? Colors.red
-                              : Colors.blue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            event.title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isCompleted && winnerTeam != null
+                ? 'Winner: ${winnerTeam.name} 🏆'
+                : 'Teams: ${eventTeams.map((t) => t.name).join(', ')}',
+            style: TextStyle(
+              fontSize: 14,
+              color: isCompleted ? Colors.green.shade700 : Colors.grey,
+              fontWeight: isCompleted ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color:
+                  isCompleted
+                      ? Colors.green.withOpacity(0.1)
+                      : event.status == EventStatus.live
+                      ? Colors.red.withOpacity(0.1)
+                      : Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              event.status.name.toUpperCase(),
+              style: TextStyle(
+                color:
+                    isCompleted
+                        ? Colors.green
+                        : event.status == EventStatus.live
+                        ? Colors.red
+                        : Colors.blue,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
 
-          ElevatedButton.icon(
-            onPressed:
-                isCompleted || _isLoading
-                    ? null
-                    : () => _endEventWithRandomWinner(event),
-            icon: Icon(
-              isCompleted ? Icons.check_circle : Icons.casino,
-              size: 20,
-            ),
-            label: Text(isCompleted ? 'Completed' : 'End Event'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? Colors.green : Colors.orange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (!isCompleted) ...[
+                // Winner Selection Dropdown
+                SizedBox(
+                  width: 140,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedWinners[event.id],
+                    hint: const Text(
+                      'Select Winner',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    items:
+                        eventTeams.map((team) {
+                          return DropdownMenuItem<String>(
+                            value: team.id,
+                            child: Text(
+                              team.name,
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                    onChanged:
+                        _isLoading
+                            ? null
+                            : (value) => _setWinnerForEvent(event.id, value),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              ElevatedButton.icon(
+                onPressed:
+                    isCompleted ||
+                            _isLoading ||
+                            (!isCompleted && _selectedWinners[event.id] == null)
+                        ? null
+                        : () => _endEventWithSelectedWinner(event),
+                icon: Icon(
+                  isCompleted ? Icons.check_circle : Icons.emoji_events,
+                  size: 20,
+                ),
+                label: Text(isCompleted ? 'Completed' : 'End Event'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

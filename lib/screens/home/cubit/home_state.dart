@@ -1,6 +1,6 @@
 part of 'home_cubit.dart';
 
-enum HomeStatus { initial, loading, loaded, error }
+enum HomeStatus { initial, loading, loaded, betWon, betLost, error }
 
 class HomeState extends Equatable {
   final HomeStatus status;
@@ -8,8 +8,10 @@ class HomeState extends Equatable {
   final List<EventModel> events;
   final List<TeamModel> trendingTeams;
   final List<TeamModel> eventSpecificTeams;
+  final List<BetModel> userBets;
   final int userCredits;
   final int todayEarnings;
+  final int? creditsWon;
 
   const HomeState({
     required this.status,
@@ -17,8 +19,10 @@ class HomeState extends Equatable {
     required this.events,
     required this.trendingTeams,
     required this.eventSpecificTeams,
+    required this.userBets,
     required this.userCredits,
     required this.todayEarnings,
+    this.creditsWon,
   });
 
   factory HomeState.initial() {
@@ -28,8 +32,10 @@ class HomeState extends Equatable {
       events: [],
       trendingTeams: [],
       eventSpecificTeams: [],
+      userBets: [],
       userCredits: 0,
       todayEarnings: 0,
+      creditsWon: null,
     );
   }
 
@@ -40,8 +46,10 @@ class HomeState extends Equatable {
     events,
     trendingTeams,
     eventSpecificTeams,
+    userBets,
     userCredits,
     todayEarnings,
+    creditsWon,
   ];
 
   HomeState copyWith({
@@ -50,8 +58,10 @@ class HomeState extends Equatable {
     List<EventModel>? events,
     List<TeamModel>? trendingTeams,
     List<TeamModel>? eventSpecificTeams,
+    List<BetModel>? userBets,
     int? userCredits,
     int? todayEarnings,
+    int? creditsWon,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -59,8 +69,10 @@ class HomeState extends Equatable {
       events: events ?? this.events,
       trendingTeams: trendingTeams ?? this.trendingTeams,
       eventSpecificTeams: eventSpecificTeams ?? this.eventSpecificTeams,
+      userBets: userBets ?? this.userBets,
       userCredits: userCredits ?? this.userCredits,
       todayEarnings: todayEarnings ?? this.todayEarnings,
+      creditsWon: creditsWon ?? this.creditsWon,
     );
   }
 }
